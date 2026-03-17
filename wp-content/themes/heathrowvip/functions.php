@@ -524,6 +524,119 @@ function my_custom_password_change_notification( $email_change_email, $user, $us
     wp_mail($to, $subject, $mess, $headers);
 }
 
+/**
+ * Heathrow VIP baggage rules.
+ */
+function heathrowvip_get_baggage_allowance_for_product( $product ) {
+    if ( ! $product instanceof WC_Product ) {
+        return 0;
+    }
+
+    $slug = $product->get_slug();
+
+    if ( strpos( $slug, 'bronze' ) !== false ) {
+        return 4;
+    }
+
+    if ( strpos( $slug, 'silver' ) !== false ) {
+        return 8;
+    }
+
+    if ( strpos( $slug, 'gold' ) !== false ) {
+        return 10;
+    }
+
+    return 0;
+}
+
+function heathrowvip_extract_posted_baggage_count() {
+    foreach ( $_POST as $key => $value ) {
+        if ( preg_match( '/^addon-\d+-number-of-bags$/', $key ) ) {
+            return max( 0, absint( wp_unslash( $value ) ) );
+        }
+    }
+
+    return null;
+}
+
+add_filter( 'woocommerce_add_cart_item_data', 'heathrowvip_store_baggage_count_in_cart_item', 20, 3 );
+function heathrowvip_store_baggage_count_in_cart_item( $cart_item_data, $product_id, $variation_id ) {
+    $baggage_count = heathrowvip_extract_posted_baggage_count();
+
+    if ( null !== $baggage_count ) {
+        $cart_item_data['heathrowvip_baggage_count'] = $baggage_count;
+    }
+
+    return $cart_item_data;
+}
+
+add_filter( 'woocommerce_get_item_data', 'heathrowvip_render_baggage_count_in_cart', 20, 2 );
+function heathrowvip_render_baggage_count_in_cart( $item_data, $cart_item ) {
+    if ( isset( $cart_item['heathrowvip_baggage_count'] ) ) {
+        $item_data[] = array(
+            'name'  => __( 'Number of bags', 'heathrowvip' ),
+            'value' => absint( $cart_item['heathrowvip_baggage_count'] ),
+        );
+    }
+
+    return $item_data;
+}
+
+add_action( 'woocommerce_cart_calculate_fees', 'heathrowvip_add_additional_baggage_fee', 20 );
+function heathrowvip_add_additional_baggage_fee( $cart ) {
+    if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+        return;
+    }
+
+    if ( ! $cart || $cart->is_empty() ) {
+        return;
+    }
+
+    $additional_baggage_cost = 0;
+
+    foreach ( $cart->get_cart() as $cart_item ) {
+        if ( empty( $cart_item['data'] ) || ! $cart_item['data'] instanceof WC_Product ) {
+            continue;
+        }
+
+        if ( ! isset( $cart_item['heathrowvip_baggage_count'] ) ) {
+            continue;
+        }
+
+        $bags      = absint( $cart_item['heathrowvip_baggage_count'] );
+        $allowance = heathrowvip_get_baggage_allowance_for_product( $cart_item['data'] );
+
+        if ( $allowance <= 0 || $bags <= $allowance ) {
+            continue;
+        }
+
+        $extra_bags  = $bags - $allowance;
+        $price_steps = (int) ceil( $extra_bags / 8 );
+        $item_fee    = ( 50 * $price_steps ) * max( 1, absint( $cart_item['quantity'] ) );
+
+        $additional_baggage_cost += $item_fee;
+    }
+
+    if ( $additional_baggage_cost > 0 ) {
+        $cart->add_fee( __( 'Additional baggage cost', 'heathrowvip' ), $additional_baggage_cost, false );
+    }
+}
+
+add_action( 'wp_enqueue_scripts', 'heathrowvip_enqueue_baggage_input_script' );
+function heathrowvip_enqueue_baggage_input_script() {
+    if ( ! is_product() ) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'heathrowvip-baggage-addon',
+        get_stylesheet_directory_uri() . '/assets/js/baggage-addon.js',
+        array( 'jquery' ),
+        null,
+        true
+    );
+}
+
 
 /* Pay By Invoice Payment Method */
 
