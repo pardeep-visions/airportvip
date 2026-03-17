@@ -755,4 +755,311 @@ function custom_woocommerce_thankyou_tracking_script() {
 
 
 /***************************************/
+
 /***************************************/
+
+/**
+ * Custom numeric-only text field on product page (Number of Bags).
+ *
+ * Field name: number-of-bags. jQuery validation and message in a separate JS file.
+ */
+add_action( 'woocommerce_before_add_to_cart_button', 'hvip_render_number_of_bags_field', 20 );
+function hvip_render_number_of_bags_field() {
+	if ( ! is_product() ) {
+		return;
+	}
+
+	$value = '';
+	if ( isset( $_POST['number-of-bags'] ) ) {
+		$value = wc_clean( wp_unslash( $_POST['number-of-bags'] ) );
+	}
+
+	// Match Woo Product Add-Ons markup so existing theme CSS applies (label + wrap + grid-area).
+	// Theme CSS targets:
+	// - `.wc-pao-addon-number-of-bags` (grid-area)
+	// - `label.wc-pao-addon-name`
+	// - `p.form-row.form-row-wide.wc-pao-addon-wrap`
+	echo '<div class="wc-pao-addon wc-pao-addon-number-of-bags hvip-number-of-bags-field">';
+	echo '<label class="wc-pao-addon-name" for="number-of-bags" data-addon-name="Number of bags">' . esc_html__( 'Number of Bags', 'heathrowvip' ) . ' <span class="required">*</span></label>';
+	echo '<p class="form-row form-row-wide wc-pao-addon-wrap">';
+	echo '<input type="text" class="input-text" id="number-of-bags" name="number-of-bags" value="' . esc_attr( $value ) . '" inputmode="numeric" required disabled="disabled" aria-disabled="true" />';
+	echo '</p>';
+	echo '<span class="hvip-number-of-bags-error" role="alert" style="display:none;"></span>';
+	echo '</div>';
+}
+
+add_filter( 'woocommerce_add_to_cart_validation', 'hvip_validate_number_of_bags_field', 10, 3 );
+function hvip_validate_number_of_bags_field( $passed, $product_id, $quantity ) {
+	if ( ! isset( $_POST['number-of-bags'] ) ) {
+		return $passed;
+	}
+
+	$value = wc_clean( wp_unslash( $_POST['number-of-bags'] ) );
+
+	// Required field.
+	if ( '' === $value ) {
+		wc_add_notice( __( 'Please enter numbers only.', 'heathrowvip' ), 'error' );
+		return false;
+	}
+
+	if ( ! preg_match( '/^\d+$/', $value ) ) {
+		wc_add_notice( __( 'Please enter numbers only.', 'heathrowvip' ), 'error' );
+		return false;
+	}
+
+	return $passed;
+}
+
+add_action( 'wp_enqueue_scripts', 'hvip_enqueue_number_of_bags_validation_script', 25 );
+function hvip_enqueue_number_of_bags_validation_script() {
+	if ( ! is_product() ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'hvip-number-of-bags-validation',
+		get_stylesheet_directory_uri() . '/assets/js/number-of-bags-validation.js',
+		array( 'jquery' ),
+		null,
+		true
+	);
+
+	wp_localize_script( 'hvip-number-of-bags-validation', 'hvipNumberOfBagsValidation', array(
+		'error_message' => __( 'Please enter numbers only.', 'heathrowvip' ),
+	) );
+}
+
+/**
+ * ----------------------------
+ * Baggage pricing (custom)
+ * ----------------------------
+ *
+ * Uses the `number-of-bags` field and applies:
+ * - Bronze included: 4
+ * - Silver included: 8
+ * - Gold/VIP included: 10
+ * Extra: £50 per 8 bags (or part thereof)
+ */
+function hvip_baggage_get_service_level_from_slug( $product_slug ) {
+	$product_slug = sanitize_title( (string) $product_slug );
+
+	if ( false !== strpos( $product_slug, 'bronze' ) ) {
+		return 'bronze';
+	}
+	if ( false !== strpos( $product_slug, 'silver' ) ) {
+		return 'silver';
+	}
+	if ( false !== strpos( $product_slug, 'vip' ) || false !== strpos( $product_slug, 'tarmac' ) ) {
+		return 'vip';
+	}
+	if ( false !== strpos( $product_slug, 'gold' ) ) {
+		return 'gold';
+	}
+
+	return 'unknown';
+}
+
+function hvip_baggage_included_limit( $service_level ) {
+	switch ( (string) $service_level ) {
+		case 'silver':
+			return 8;
+		case 'gold':
+		case 'vip':
+			return 10;
+		case 'bronze':
+		case 'unknown':
+		default:
+			return 4;
+	}
+}
+
+function hvip_baggage_extra_fee( $bag_count, $service_level ) {
+	$bag_count = absint( $bag_count );
+	$included  = hvip_baggage_included_limit( $service_level );
+
+	if ( $bag_count <= 0 || $bag_count <= $included ) {
+		return 0.0;
+	}
+
+	$extra_bags = $bag_count - $included;
+	$blocks     = (int) ceil( $extra_bags / 8 );
+
+	return (float) ( 50 * $blocks );
+}
+
+add_filter( 'woocommerce_add_cart_item_data', 'hvip_baggage_add_cart_item_data', 10, 3 );
+function hvip_baggage_add_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
+	if ( ! isset( $_POST['number-of-bags'] ) ) {
+		return $cart_item_data;
+	}
+
+	$bags = absint( wc_clean( wp_unslash( $_POST['number-of-bags'] ) ) );
+	if ( $bags < 1 ) {
+		$bags = 1;
+	}
+
+	$product = wc_get_product( $variation_id ? $variation_id : $product_id );
+	if ( ! $product ) {
+		return $cart_item_data;
+	}
+
+	$slug          = get_post_field( 'post_name', $product_id );
+	$service_level = hvip_baggage_get_service_level_from_slug( $slug );
+	$included      = hvip_baggage_included_limit( $service_level );
+	$fee           = hvip_baggage_extra_fee( $bags, $service_level );
+
+	$cart_item_data['hvip_bags_count']     = $bags;
+	$cart_item_data['hvip_bags_included']  = $included;
+	$cart_item_data['hvip_bags_fee']       = (float) $fee;
+	$cart_item_data['hvip_service_level']  = $service_level;
+	// Base price for bookings is determined later (after Bookings calculates cost).
+	$cart_item_data['hvip_base_price']     = null;
+	$cart_item_data['hvip_base_price_set'] = false;
+
+	// Prevent merging items with different bag count.
+	$cart_item_data['unique_key'] = md5( microtime( true ) . wp_rand() );
+
+	return $cart_item_data;
+}
+
+add_action( 'woocommerce_before_calculate_totals', 'hvip_baggage_apply_price', 20, 1 );
+function hvip_baggage_apply_price( $cart ) {
+	if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+		return;
+	}
+	if ( ! $cart || ! is_a( $cart, 'WC_Cart' ) ) {
+		return;
+	}
+
+	foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
+		if ( empty( $cart_item['data'] ) || ! is_a( $cart_item['data'], 'WC_Product' ) ) {
+			continue;
+		}
+		if ( ! isset( $cart_item['hvip_bags_count'] ) ) {
+			continue;
+		}
+
+		// Lock the base price once, after Bookings has set the calculated cost.
+		if ( empty( $cart_item['hvip_base_price_set'] ) ) {
+			$cart_item['hvip_base_price']     = (float) $cart_item['data']->get_price( 'edit' );
+			$cart_item['hvip_base_price_set'] = true;
+			$cart->cart_contents[ $cart_item_key ] = $cart_item;
+		}
+
+		$base = isset( $cart_item['hvip_base_price'] ) && is_numeric( $cart_item['hvip_base_price'] )
+			? (float) $cart_item['hvip_base_price']
+			: (float) $cart_item['data']->get_price( 'edit' );
+		$fee  = isset( $cart_item['hvip_bags_fee'] ) ? (float) $cart_item['hvip_bags_fee'] : 0.0;
+
+		$cart_item['data']->set_price( $base + $fee );
+	}
+}
+
+add_filter( 'woocommerce_get_item_data', 'hvip_baggage_item_data', 10, 2 );
+function hvip_baggage_item_data( $item_data, $cart_item ) {
+	if ( ! isset( $cart_item['hvip_bags_count'] ) ) {
+		return $item_data;
+	}
+
+	$bags     = absint( $cart_item['hvip_bags_count'] );
+	$included = isset( $cart_item['hvip_bags_included'] ) ? absint( $cart_item['hvip_bags_included'] ) : 0;
+	$extra    = max( 0, $bags - $included );
+	$fee      = isset( $cart_item['hvip_bags_fee'] ) ? (float) $cart_item['hvip_bags_fee'] : 0.0;
+
+	$item_data[] = array(
+		'key'   => __( 'Number of Bags', 'heathrowvip' ),
+		'value' => (string) $bags,
+	);
+	$item_data[] = array(
+		'key'   => __( 'Included bags', 'heathrowvip' ),
+		'value' => (string) $included,
+	);
+	$item_data[] = array(
+		'key'   => __( 'Extra bags', 'heathrowvip' ),
+		'value' => (string) $extra,
+	);
+	$item_data[] = array(
+		'key'   => __( 'Extra baggage fee', 'heathrowvip' ),
+		'value' => $fee > 0 ? wc_price( $fee ) : __( 'Free', 'heathrowvip' ),
+	);
+
+	return $item_data;
+}
+
+add_action( 'woocommerce_checkout_create_order_line_item', 'hvip_baggage_add_order_item_meta', 10, 4 );
+function hvip_baggage_add_order_item_meta( $item, $cart_item_key, $values, $order ) {
+	if ( empty( $values['hvip_bags_count'] ) ) {
+		return;
+	}
+
+	$bags     = absint( $values['hvip_bags_count'] );
+	$included = isset( $values['hvip_bags_included'] ) ? absint( $values['hvip_bags_included'] ) : 0;
+	$extra    = max( 0, $bags - $included );
+	$fee      = isset( $values['hvip_bags_fee'] ) ? (float) $values['hvip_bags_fee'] : 0.0;
+
+	$item->add_meta_data( __( 'Number of Bags', 'heathrowvip' ), $bags, true );
+	$item->add_meta_data( __( 'Included bags', 'heathrowvip' ), $included, true );
+	$item->add_meta_data( __( 'Extra bags', 'heathrowvip' ), $extra, true );
+	$item->add_meta_data( __( 'Extra baggage fee', 'heathrowvip' ), $fee > 0 ? wc_price( $fee ) : __( 'Free', 'heathrowvip' ), true );
+}
+
+add_action( 'wp_enqueue_scripts', 'hvip_baggage_enqueue_pricing_js', 26 );
+function hvip_baggage_enqueue_pricing_js() {
+	if ( ! is_product() ) {
+		return;
+	}
+
+	global $post;
+	if ( ! $post || empty( $post->post_name ) ) {
+		return;
+	}
+
+	$service_level = hvip_baggage_get_service_level_from_slug( $post->post_name );
+	$included      = hvip_baggage_included_limit( $service_level );
+
+	wp_enqueue_script(
+		'hvip-number-of-bags-pricing',
+		get_stylesheet_directory_uri() . '/assets/js/number-of-bags-pricing.js',
+		array( 'jquery' ),
+		null,
+		true
+	);
+
+	wp_localize_script(
+		'hvip-number-of-bags-pricing',
+		'hvipNumberOfBagsPricing',
+		array(
+			'service_level' => $service_level,
+			'included'      => $included,
+			'fee_per_block' => 50,
+			'block_size'    => 8,
+			'currency_sym'  => get_woocommerce_currency_symbol(),
+			'decimal_sep'   => wc_get_price_decimal_separator(),
+			'thousand_sep'  => wc_get_price_thousand_separator(),
+			'decimals'      => wc_get_price_decimals(),
+			'price_format'  => get_woocommerce_price_format(),
+			'free_text'     => __( 'Free', 'heathrowvip' ),
+		)
+	);
+}
+
+add_action( 'woocommerce_single_product_summary', 'hvip_baggage_gold_vip_note', 25 );
+function hvip_baggage_gold_vip_note() {
+	if ( ! is_product() ) {
+		return;
+	}
+
+	global $post;
+	if ( ! $post || empty( $post->post_name ) ) {
+		return;
+	}
+
+	$service_level = hvip_baggage_get_service_level_from_slug( $post->post_name );
+	if ( 'gold' !== $service_level && 'vip' !== $service_level ) {
+		return;
+	}
+
+	echo '<div class="woocommerce-info hvip-complimentary-car-note">';
+	echo wp_kses_post( __( 'One complimentary car is included in this quote. If the number of people and bags exceed what we can fit in the car we will contact you to upgrade your car options.', 'heathrowvip' ) );
+	echo '</div>';
+}
