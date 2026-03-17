@@ -1,0 +1,13 @@
+# Logs
+error_log
+*.log
+
+# Backups
+*.wpress
+*.zip
+
+# WordPress uploads (optional)
+wp-content/uploads/
+
+# Cache
+wp-content/cache/

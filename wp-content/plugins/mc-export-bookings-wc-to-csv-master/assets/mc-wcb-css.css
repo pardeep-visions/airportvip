@@ -1,0 +1,48 @@
+.mc-wcb-export-box, .mc-wcb-exports-list {
+	padding: 1rem 2rem;
+}
+.mc-wcb-export-box label {
+    margin: 1rem 0;
+    display: inline-block;
+}
+.mc-wcb-response {
+	padding: 1rem 0;
+	position: relative;
+	min-height: 20px;
+}
+.mc-wcb-loader {
+	display: none;
+	position: absolute;
+	top: 0;
+}
+.mc-wcb-export, .mc-wcb-export-result, .mc-wcb-download, .mc-wcb-date-picker {
+	display: none;
+}
+.mc-wcb-date-picker.visible {
+	display: block;
+}
+
+
+ /* Style for the overlay */
+    #overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+        z-index: 1000; /* Ensure it's above other content */
+        backdrop-filter: blur(5px); /* CSS backdrop-filter for blur effect */
+    }
+
+    #loading_indicator {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        z-index: 1001; /* Ensure it's above overlay */
+    }

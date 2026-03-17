@@ -1,0 +1,1039 @@
+
+
+
+.flex {
+    display: flex;
+    flex-wrap: wrap;
+}
+.justify-between {
+    justify-content: space-between;
+}
+
+.grid {
+    display: grid;
+    gap: 0.5rem;
+    margin-right: -1rem;
+}
+
+.grid-cols-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.grid-cols-4 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.w-full {
+    width: 100%;
+}
+.w-full label {
+    margin-top: 0.5rem;
+    display: block;
+}
+.w-1\/2 {
+    width: 50%;
+    padding: 0.5rem;
+    overflow: hidden;
+}
+.mt-2 {
+    margin-top: 2rem;
+}
+
+
+
+/*
+    Square Socket Ltd. 
+    Meet & Greet Booking System
+    All Rights Reserved
+    Copyright 2022
+*/
+
+/**** INDEX ****************
+
+1. Meet & Greet
+    1.1 Meet & Greet Header
+    1.2 Meet & Greet Single Layout
+    1.3 Meet & Greet Single Specific
+    1.4 Meet & Greet Tooltips
+    1.5 Calendar
+    1.6 Meet & Greet Inputs
+2. Chauffeur
+    2.1 Chauffeur Header
+    2.2 Chauffeur Single Layout
+    2.3 Car Card
+    2.4 Chauffeur Car Card
+    2.5 Taxi (aka Gold) Car Card
+3. Ancillary
+    3.1 Service Filter
+    3.2 Service Type Card
+    3.3 Service Level Card
+    3.4 Information Panel
+    3.5 Alert Panel 
+    3.6 Booking Cart
+
+
+/****************************************/
+/****************************************/
+/*********** 1. Meet & Greet  ***********/
+/****************************************/
+/****************************************/
+
+/**** 1.1 Meet & Greet Header ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 1.2 Meet & Greet Single Layout ****/
+
+
+
+/***/
+/*
+.summary.entry-summary {
+    width: 100%!important;
+}
+
+.wc-pao-addons-container {
+    display: grid;
+    grid-gap: 0px 30px;
+    grid-template-areas: 
+	"inboundflightnumber inboundflightnumber inboundflightnumber inboundflightnumber"
+	"outboundflightnumber outboundflightnumber outboundflightnumber outboundflightnumber "
+    "firstname lastname emailaddress phonenumber"
+	"dropoffaddress dropoffaddress dropoffaddress dropoffaddress"
+	"pickupaddress pickupaddress pickupaddress pickupaddress"
+    "numberofbags numberofbags numberofchildren numberofchildren"
+    "numberofporters numberofporters numberofporters numberofporters"
+    "addonstotal addonstotal addonstotal addonstotal";
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    margin-bottom: 25px;
+}
+
+.product.product_cat-inbound-flight.product_cat-outbound-flight .wc-pao-addons-container {
+    grid-template-areas: 
+	"inboundflightnumber inboundflightnumber outboundflightnumber outboundflightnumber"
+    "firstname lastname emailaddress phonenumber"
+	"dropoffaddress dropoffaddress dropoffaddress dropoffaddress"
+	"pickupaddress pickupaddress pickupaddress pickupaddress"
+    "numberofbags numberofbags numberofchildren numberofchildren"
+    "numberofporters numberofporters numberofporters numberofporters"
+    "addonstotal addonstotal addonstotal addonstotal";
+}
+*/
+
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+   /* 
+   .wc-pao-addons-container {
+        grid-template-areas: 
+		"inboundflightnumber inboundflightnumber "
+		"outboundflightnumber outboundflightnumber "
+        "firstname lastname"
+        "emailaddress phonenumber"
+		"dropoffaddress dropoffaddress"
+		"pickupaddress pickupaddress"
+        "numberofbags numberofbags"
+        "numberofchildren numberofchildren"
+        "numberofporters numberofporters"
+        "addonstotal addonstotal";
+        grid-template-columns: 1fr 1fr;
+    }
+	
+	
+.product.product_cat-inbound-flight.product_cat-outbound-flight .wc-pao-addons-container {
+    grid-template-areas: 
+		"inboundflightnumber inboundflightnumber "
+		"outboundflightnumber outboundflightnumber "
+		"firstname lastname"
+		"emailaddress phonenumber"
+		"dropoffaddress dropoffaddress"
+		"pickupaddress pickupaddress"
+		"numberofbags numberofbags"
+		"numberofchildren numberofchildren"
+		"numberofporters numberofporters"
+		"addonstotal addonstotal";
+	}
+
+    div#wc-bookings-booking-form > p.form-field {
+        max-width: 100%;
+    }
+    */
+
+}
+/*
+.wc-pao-addon-drop-off-address  {
+	grid-area: dropoffaddress ;  
+}
+	
+.wc-pao-addon-pickup-address {
+	grid-area: pickupaddress ;  
+}
+
+div#wc-bookings-booking-form {
+	grid-area: bookingform ;   
+}
+
+.wc-pao-addon-add-ons {
+    grid-area: addons;   
+}
+
+.wc-pao-addon-inbound-flight-number {
+	grid-area: inboundflightnumber;   
+}
+
+
+.wc-pao-addon.wc-pao-addon-outbound-flight-number {
+	grid-area: outboundflightnumber;   
+}
+
+.wc-pao-addon-first-name {
+	grid-area: firstname;   
+}
+
+.wc-pao-addon-last-name {
+	grid-area: lastname;   
+}
+
+.wc-pao-addon-email-address {
+	grid-area: emailaddress;   
+}
+
+.wc-pao-addon-phone-number {
+	grid-area: phonenumber;   
+}
+
+.wc-pao-addon-number-of-bags {
+	grid-area: numberofbags;   
+}
+
+.wc-pao-addon-number-of-children {
+	grid-area: numberofchildren;   
+}
+
+.wc-pao-addon-number-of-porters {
+	grid-area: numberofporters;   
+}
+
+div#product-addons-total {
+    grid-area: addonstotal;  
+}
+*/
+
+.product  p.price {
+    text-align: center;
+}
+
+div#wc-bookings-booking-form, .wc-pao-addons-container {
+    display: contents!important;
+}
+
+.single-product div.product form.cart::before, .single-product div.product form.cart::after {
+    content: none;
+}
+
+.wc-pao-addon-number-of-porters {
+	grid-area: numberofporters;   
+}
+
+div#product-addons-total {
+    grid-area: addonstotal;  
+}
+
+div#wc-bookings-booking-form > p.form-field:nth-of-type(1) {
+    grid-area: numberofadults;  
+}
+
+div#wc-bookings-booking-form > p.form-field:nth-of-type(2) {
+    grid-area: numberofchildren;  
+}
+
+.wc-pao-addon-electric-golf-carts-are-available-in-all-terminals-except-terminal-5 {
+    grid-area: golfcarts;  
+}
+
+.booking-fields--start-time-desc {
+    grid-area: textareastarttime;  
+}
+
+.booking-fields--terms {
+    grid-area: textareaterms;  
+}
+
+button#add-chauffeur-btn {
+    grid-area: addtaxibutton; 
+}
+  
+.wc_booking_field_cars {
+    grid-area: cars; 
+}
+  
+div#taxi-block {
+    grid-area: taxiblock; 
+}
+
+.single_add_to_cart_button {
+    grid-area: addtocartbutton; 
+}
+  
+input.wc-booking-product-id {
+    grid-area: addtocart; 
+}
+  
+.wc-bookings-booking-cost.price {
+    grid-area: bookingprice; 
+}
+  
+fieldset.wc-bookings-date-picker {
+    grid-area: datepicker;  
+}
+
+/*
+.wc-bookings-booking-form .form-field {
+    grid-area: datepickerform;  
+}*/
+
+fieldset.wc-bookings-date-picker + .form-field.form-field-wide {
+    grid-area: datepickerform;  
+}
+  
+.form-field.form-field-wide:has(.block-picker.wc-bookings-time-block-picker) {
+    grid-area: datepickerform;  
+}
+  
+.wc-pao-addon-drop-off-address  {
+    grid-area: dropoffaddress ;  
+}
+      
+.wc-pao-addon-pickup-address {
+    grid-area: pickupaddress ;  
+}
+  
+div#wc-bookings-booking-form {
+    grid-area: bookingform ;   
+}
+  
+.wc-pao-addon-add-ons {
+    grid-area: addons;   
+}
+  
+.wc-pao-addon-airport-of-departure {
+    grid-area: airportofdeparture;   
+}
+  
+.wc-pao-addon-inbound-flight-number {
+    grid-area: inboundflightnumber;   
+}
+  
+.wc-pao-addon-destination-airport {
+    grid-area: destinationairport;   
+}
+
+.wc-pao-addon-flight-time {
+    grid-area: flighttime;
+}
+  
+.wc-pao-addon.wc-pao-addon-outbound-flight-number {
+    grid-area: outboundflightnumber;   
+}
+  
+.wc-pao-addon-first-name {
+    grid-area: firstname;   
+}
+  
+.wc-pao-addon-last-name {
+    grid-area: lastname;   
+}
+  
+.wc-pao-addon-email-address {
+    grid-area: emailaddress;   
+}
+  
+.wc-pao-addon-phone-number {
+    grid-area: phonenumber;   
+}
+  
+.wc-pao-addon-number-of-bags {
+    grid-area: numberofbags;   
+}
+  
+.wc-pao-addon-special-needs {
+    grid-area: specialneeds;   
+}
+  
+.wc-pao-addon-infants-below-3y-o {
+    grid-area: numberofinfants;   
+}
+  
+.wc-pao-addon-number-of-porters {
+    grid-area: numberofporters;   
+}
+  
+div#product-addons-total {
+    grid-area: addonstotal;  
+}
+  
+div#wc-bookings-booking-form > p.form-field:nth-of-type(1) {
+    grid-area: numberofadults;  
+}
+  
+div#wc-bookings-booking-form > p.form-field:nth-of-type(2) {
+    grid-area: numberofchildren;  
+}
+  
+.wc-pao-addon-booking-date {
+    position: absolute;
+    left: -200000px;
+}
+ 
+.wc-bookings-booking-form .form-field input[type=number] {
+    width: 100%;
+}
+
+.wc-pao-addon .wc-pao-addon-wrap {
+    margin: 0 0 0 0;
+}
+
+input[type="color"], input[type="date"], input[type="datetime-local"], input[type="datetime"], input[type="email"], input[type="month"], input[type="number"], input[type="password"], input[type="range"], input[type="search"], input[type="tel"], input[type="text"], input[type="time"], input[type="url"], input[type="week"], textarea, select {
+    font-size: 12px;
+}
+
+.wc-pao-addon .wc-pao-addon-wrap select {
+    width: auto;
+    min-width: 100%;
+    border-color: #d9d9d9;
+}
+
+.wc-pao-addon-container.wc-pao-addon.wc-pao-addon-special-needs p {
+    font-size: 14px;
+    cursor: pointer!important;
+}
+
+.product-addon-totals *, .block-picker.wc-bookings-time-block-picker p {
+    font-size: 14px;
+}
+
+label.wc-pao-addon-name, p.form-field {
+    font-size: 12px;
+    color: #6d6d6d;
+}
+
+h1.product_title.entry-title {
+    text-align: center;
+}
+
+.cross-reference-buttons {
+    text-align: center;
+}
+
+.wc-pao-addon label.wc-pao-addon-name {
+    font-weight: 300;
+    letter-spacing: 1px;
+}
+
+.product_meta, section.related.products {
+    display: none;
+}
+
+div#tax-addon-fields {
+    display: none;
+}
+
+.product_cat-meet-and-greet form.cart {
+    display: grid;
+    grid-gap: 0px 15px;
+    grid-template-areas: 
+    "numberofadults numberofadults numberofadults numberofadults numberofchildren numberofchildren numberofchildren numberofchildren numberofinfants numberofinfants numberofinfants numberofinfants"
+    "datepicker datepicker datepicker datepicker datepicker datepicker datepicker datepicker datepicker datepicker datepicker datepicker"
+    
+    "textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime textareastarttime"    
+    
+    "datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform datepickerform"
+    "bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice bookingprice"
+    "airportofdeparture airportofdeparture airportofdeparture airportofdeparture airportofdeparture airportofdeparture inboundflightnumber inboundflightnumber inboundflightnumber inboundflightnumber inboundflightnumber inboundflightnumber"
+    "destinationairport destinationairport destinationairport destinationairport destinationairport destinationairport outboundflightnumber outboundflightnumber outboundflightnumber outboundflightnumber outboundflightnumber outboundflightnumber"
+    "firstname firstname firstname lastname lastname lastname emailaddress emailaddress emailaddress phonenumber phonenumber phonenumber"
+    "dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress dropoffaddress"
+    "pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress pickupaddress"
+    "numberofbags numberofbags numberofbags numberofbags numberofbags numberofbags specialneeds specialneeds specialneeds specialneeds specialneeds specialneeds"
+    "numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters numberofporters"
+
+    "golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts golfcarts"
+
+    "addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton addtaxibutton"
+    "taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock taxiblock"
+
+    "addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal addonstotal"
+
+    "textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms textareaterms"
+
+    "addtocart addtocart addtocart addtocart addtocart addtocart addtocart addtocart addtocart addtocart addtocart addtocart"
+    "addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton addtocartbutton";
+    grid-template-rows: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    margin-bottom: 25px;
+}
+
+h2.wc-pao-addon-heading {
+    font-size: 16px;
+    margin: 10px 0 0;
+}
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+    .wc-pao-addons-container {
+        grid-template-areas: 
+        "inboundflightnumber inboundflightnumber "
+        "outboundflightnumber outboundflightnumber "
+        "firstname lastname"
+        "emailaddress phonenumber"
+        "dropoffaddress dropoffaddress"
+        "pickupaddress pickupaddress"
+        "numberofbags numberofbags"
+        "numberofchildren numberofchildren"
+        "numberofporters numberofporters"
+        "addonstotal addonstotal";
+        grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    }
+    
+    .product.product_cat-inbound-flight.product_cat-outbound-flight .wc-pao-addons-container {
+        grid-template-areas: 
+        "inboundflightnumber inboundflightnumber "
+        "outboundflightnumber outboundflightnumber "
+        "firstname lastname"
+        "emailaddress phonenumber"
+        "dropoffaddress dropoffaddress"
+        "pickupaddress pickupaddress"
+        "numberofbags numberofbags"
+        "numberofchildren numberofchildren"
+        "numberofporters numberofporters"
+        "addonstotal addonstotal";
+    }
+
+    div#wc-bookings-booking-form > p.form-field {
+        max-width: 100%;
+    }
+}
+
+/**** 1.3 Meet & Greet Single Specific ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 1.4 Meet & Greet Tooltips ****/
+
+div#wc-bookings-booking-form > p.form-field:nth-of-type(1) {
+    position: relative;
+    isolation: isolate;
+}
+
+div#wc-bookings-booking-form > p.form-field:nth-of-type(1):before {
+    content: "Contact Us for Groups of 10+ ";
+    display: block;
+    position: absolute;
+    background: #222;
+    padding: 5px 10px;
+    bottom: 0px;
+    left: 0px;
+    border: 1px solid #000;
+    font-size: 12px;
+    width: 100%;
+    color: white;
+    border-radius: 5px;
+    opacity: 0;
+    transition: 0.5s;
+    z-index: -1;
+}
+
+div#wc-bookings-booking-form > p.form-field:nth-of-type(1):hover:before, div#wc-bookings-booking-form > p.form-field:nth-of-type(1):has(input:focus):before {
+    display: block;
+    opacity: 1;
+    bottom: -27px;
+}
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 1.5 Calendar ****/
+
+fieldset.wc-bookings-date-picker.wc_bookings_field_start_date {
+    /*  background: #000;*/
+}
+  
+.wc-bookings-date-picker .ui-datepicker td.bookable a.ui-state-default {
+    background-color: #f3f6ff !important;
+    color: #000!important;
+}
+  
+.wc-bookings-date-picker .ui-datepicker td.bookable-range .ui-state-default {
+    background: #001e7d !important;
+    color: #fff!important;
+}
+  
+.wc-bookings-date-picker .ui-datepicker td .ui-state-default {
+   /*   color: white;*/
+}
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 1.6 Meet & Greet Inputs ****/
+
+a.button--meet-greet {
+    background: transparent;
+    color: #052438!important;
+    border-color: #052438;
+}
+
+a.button--meet-greet:hover {
+    background: #87A5CB!important;
+    color: #052438!important;
+    border-color: #052438!important;
+}
+
+
+button#add-chauffeur-btn {
+    margin: 20px 0 20px!important;
+}
+
+
+
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+
+
+/****************************************/
+/****************************************/
+/************ 2. Chauffeur  *************/
+/****************************************/
+/****************************************/
+
+
+/**** 2.1 Chauffeur Header ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 2.2 Chauffeur Single Layout ****/
+
+
+.product_cat-chauffeur .form-field.form-field-wide.wc_booking_field_.wc_bookings_field_resource label {
+    font-size: 0;
+}
+
+.product_cat-chauffeur .form-field.form-field-wide.wc_booking_field_.wc_bookings_field_resource label:before {
+    content: "Please Select the type of car:";
+    font-size: 16px;
+}
+
+.product_cat-chauffeur .car img {
+    height: auto!important;
+}
+
+.product_cat-chauffeur  div#chauffeur-block {
+    display: block!important;
+}
+
+.product_cat-chauffeur div#chauffeur-block {
+    grid-area: chauffeurmap!important;   
+}
+
+.product_cat-chauffeur button.wc-bookings-booking-form-button.single_add_to_cart_button {
+    grid-area: booknow;   
+}
+
+.form-field.form-field-wide.wc_booking_field_.wc_bookings_field_resource {
+    grid-area: cars;   
+}
+
+.product_cat-chauffeur form.cart {
+    grid-template-areas:
+    "cars cars cars cars"
+    "datepicker datepicker datepicker datepicker"
+    "datepickerform datepickerform datepickerform datepickerform"
+    "firstname firstname lastname lastname"
+    "emailaddress emailaddress phonenumber phonenumber"
+    "numberofbags numberofbags specialneeds specialneeds"
+    "chauffeurmap chauffeurmap chauffeurmap chauffeurmap"
+    "bookingprice bookingprice bookingprice bookingprice"
+    "addonstotal addonstotal addonstotal addonstotal"
+    "booknow booknow booknow booknow";
+    grid-template-rows: minmax(0,1fr);
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+    display: grid;
+    grid-gap: 0px 15px;
+    margin-bottom: 25px;
+}
+
+.taxi-block--chauffeur-inputs-top label {
+    color: #222!important;
+}
+
+.product_cat-chauffeur p.price {
+    display:none;
+}
+
+div#maps * {
+    color: #222!important
+  }
+
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 2.3 Car Card ****/
+
+.car-selected {
+    display: none;
+    color: green;
+    position: absolute;
+    z-index: 2;
+    top: 5px;
+    right: 5px;
+    width: 25px;
+    height: 25px;
+    background: #ffffff;
+    border-radius: 50%;
+}
+
+.car-selected svg {
+    position: relative;
+    top: -2px;
+}
+
+.car {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: rgba(0, 0, 0, 0.1) 0 20px 25px -5px,
+    rgba(0, 0, 0, 0.04) 0 10px 10px -5px;
+}
+
+/*.car img {
+    height: 100%;
+    width: 100%;
+}*/
+
+.car-caption, .taxi-block--car-caption {
+    padding: 10px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background: #ffffff;
+    height: 100%;
+    grid-template-rows: minmax(0,1fr) auto;
+    display: grid;
+}
+
+.car-image, .taxi-block--car-image {
+    padding-top: 60%;
+    background-size: cover!important;
+    background-position: center!important;
+}
+
+.car-caption--title, .taxi-block--car-caption-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: #042637;
+}
+
+.car-caption--line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+}
+
+.car-caption p {
+    margin-bottom: 0;
+}
+
+.additional-price {
+    margin: 1rem 0;
+}
+
+.price-item {
+    border-bottom: 1px dotted #cdcdcd;
+}
+
+.single-product div.product {
+    max-width: none !important;
+}
+
+.product_cat-chauffeur-bolt-on .car-caption--line.car-caption--duration {
+    display: none;
+}
+
+/**** 2.4 Chauffeur Car Card ****/
+
+.taxi-block--car-caption {
+    background: #EEEEEE!important;
+}
+
+.new-chauffeur:has(.car.car-active) .car-image {
+    -webkit-filter: grayscale(100%);
+}
+
+.new-chauffeur:has(.car.car-active) .car.car-active .car-image {
+    -webkit-filter: grayscale(0%);
+}
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 2.5 Taxi (aka Gold) Car Card ****/
+
+.taxi-block--chauffeur-inputs-top {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-gap: 20px;
+    margin: 20px 0;
+}
+
+.taxi-block--chauffeur-inputs-top label {
+    color: white;
+}
+
+div#taxi-resource-block {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+    grid-gap: 20px;
+    margin: 20px 0;
+}
+
+.taxi-block--car-caption {
+    padding: 20px;
+    background: black;
+}
+
+/*
+.taxi-block--cards:has(.car.car-active) .car-image {
+    -webkit-filter: grayscale(100%);
+}
+
+.taxi-block--cards:has(.car.car-active) .car.car-active .car-image {
+    -webkit-filter: grayscale(0%);
+}*/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+      /* MOBILE RULES GO HERE */
+}
+
+/****************************************/
+/****************************************/
+/************ 3. Ancillary  *************/
+/****************************************/
+/****************************************/
+
+
+/**** 3.1 Service Filter ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 3.2 Service Type Card ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 3.3 Service Level Card ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 3.4 Information Panel ****/
+
+.chauffeur-bolt-on--no-meet-and-greet-notice {
+    margin: 0 0 25px;
+    border: 4px solid #FEC107;
+    padding: 25px 20px 25px;
+    background: #fff;
+    background: repeating-linear-gradient(-45deg, #F4F4F4, #F4F4F4 12px, transparent 10px, transparent 23px);
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    grid-gap: 0px;
+    align-items: center;
+    text-align: center;
+}
+
+.chauffeur-bolt-on--no-meet-and-greet-notice--left {
+    color: #F77D1B;
+    font-size: 20px;
+    margin: 0;
+}
+
+.booking-fields--terms {
+    padding: 5px 0 20px;
+}
+
+.booking-fields--start-time-desc .info-banner {
+    background: #e0edfc;
+    border: 1px solid #0a3971;
+}
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 3.5 Alert Panel ****/
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+}
+
+/**** 3.6 Booking Cart ****/
+
+
+td.product-thumbnail, th.product-thumbnail {
+    display: none!important;
+}
+
+dl.variation {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-gap: 0 10px;
+}
+
+form.woocommerce-cart-form *, table.shop_table.shop_table_responsive * {
+   /* color: white;*/
+    font-weight: 100;
+    font-size: 14px;
+}
+
+.info-banner p, .woocommerce-form-coupon-toggle a {
+    color: #222!important;
+}
+
+form.woocommerce-cart-form .input-text.qty {
+    color: #222!important;
+}
+
+a.remove::before {
+    color: #8e1222;
+}
+
+button#place_order {
+    color: #222!important;
+    border-color: #222!important;
+}
+
+button#place_order:hover {
+    color: #fff!important;
+    background: #222!important;
+    border-color: #222!important;
+}
+
+div#order_review * {
+    color: #222;
+    font-size: 14px;
+}
+
+.woocommerce-order * {
+    color: #222;
+}
+
+button#place_order {
+    color: white!important;
+}
+
+table:not( .has-background ) tbody tr:nth-child(2n) td, fieldset, fieldset legend {
+    background-color: transparent;
+}
+
+@media (min-width: 768px) {
+    /* DESKTOP RULES GO HERE */
+}
+
+@media screen and (max-width: 767px) {
+    /* MOBILE RULES GO HERE */
+    div#wc-bookings-booking-form > p.form-field {
+        max-width: 100%;
+    }
+	
+	.wc-pao-addon-number-of-porters {
+		padding: 40% 0px 0;
+		width: 100%;
+	}
+
+    .btn.btn-sm {
+        padding: .5rem 1rem;
+        font-size: 0.54rem;
+    }
+}
+
+

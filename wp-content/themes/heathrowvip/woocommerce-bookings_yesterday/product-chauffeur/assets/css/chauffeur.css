@@ -1,0 +1,36 @@
+.wc-bookings-booking-form-button {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
+}
+.chauffeur-modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  width: 100vw;
+  height: 100vh;
+}
+.chauffeur-modal-content {
+  background: #ffffff;
+  z-index: 70;
+  border-radius: 5px;
+  text-align: center;
+  padding: 2rem;
+}
+.chauffeur-confirm-btn {
+  margin-right: 1rem;
+}
+.chauffeur-cancel-btn {
+  background: #990d13;
+  border-color: #990d13;
+}
+
+.chauffeur-cancel-btn:hover {
+  background: #000;
+  border-color: #000;
+}

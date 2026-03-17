@@ -1,0 +1,23 @@
+table tr td input, table tr td textarea {
+    width: 100% !important;
+}
+.taxi-restrict-location-content {
+    border-bottom: 1px solid #eee;
+    padding: 1rem;
+}
+ul.locations li {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+    width: 100%;
+    justify-content: space-between;
+}
+ul.locations li:last-child {
+    border-bottom: none;
+}
+#taxi-panel .delete {
+    color: red;
+    background: transparent;
+    border: none;
+}

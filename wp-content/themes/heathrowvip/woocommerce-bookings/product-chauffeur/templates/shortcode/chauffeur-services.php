@@ -1,0 +1,14 @@
+<?php
+ goto BOW8m; dkqtI: $car_products = new WP_Query(array("\160\157\163\x74\137\164\x79\x70\145" => "\143\x61\x72", "\160\x6f\163\164\163\137\160\145\162\137\x70\x61\147\x65" => -1)); goto uiPM4; uiPM4: ?>
+<div class="taxi-block"id="taxi-block"><div class="taxi-block--chauffeur-inputs"><div class="w-full"><label for="to-address">Pickup</label> <input name="fromAddress"class="w-full input-text"id="from-address"placeholder="From address"></div><div class="w-full"><label for="to-address">Dropoff</label> <input name="toAddress"class="w-full input-text"id="to-address"placeholder="To address"></div><div class="w-full"id="msg"></div></div><div id="car-price-items"><input name="is_add_chauffeur"type="hidden"value="0"> <input name="car_price"type="hidden"value="0"> <input name="distance"type="hidden"> <input name="car_name"type="hidden"> <input name="car_id"type="hidden"></div><div class="mt-2 grid grid-cols-3"><?php  goto s7Req; s7Req: if ($car_products->have_posts()) { while ($car_products->have_posts()) { $car_products->the_post(); $price = get_post_meta(get_the_ID(), "\x70\162\151\143\145", true); $image = ''; if (has_post_thumbnail()) { $image = get_the_post_thumbnail_url(); } ?>
+<div class="car"style="cursor:pointer;position:relative"data-id="<?php  the_ID(); ?>
+"data-name="<?php  the_title(); ?>
+"data-price="<?php  echo $price; ?>
+"><div class="car-selected"><svg class="h-6 w-6"fill="none"stroke="currentColor"stroke-width="1.5"viewBox="0 0 24 24"xmlns="http://www.w3.org/2000/svg"><path d="M4.5 12.75l6 6 9-13.5"stroke-linecap="round"stroke-linejoin="round"/></svg></div><div class="car-image"style="height:100%"><img alt="<?php  the_title(); ?>
+"src="<?php  echo $image; ?>
+"></div><div class="car-caption"><p><strong><?php  the_title(); ?>
+</strong></p><p>Price:<?php  echo wc_price($price); ?>
+/km</p></div></div><?php  } } goto dfei3; dfei3: ?>
+</div><div class="mt-2"id="taxi-subtotal"><div class="address-information"></div><div class="car-information"></div><div class="total-information"></div></div></div><?php  goto b6zPC; ZDMxJ: if (!$google_maps_key) { $google_maps_key = "\170\x78\170\170\x78"; } goto km7u0; av28Y: echo $google_maps_key; goto WetPt; b6zPC: $google_maps_key = get_field("\x67\157\x6f\x67\x6c\145\137\155\x61\x70\x73\137\x6b\145\171", "\157\x70\164\151\x6f\156\163"); goto ZDMxJ; BOW8m: remove_action("\x73\x74\157\x72\x65\146\162\157\156\x74\x5f\146\x6f\x6f\x74\x65\x72", "\x70\x72\x69\x6e\164\x5f\x61\143\146\x5f\147\157\157\x67\x6c\x65\x5f\x6d\141\160\x73\137\144\x65\160\x65\x6e\144\145\x6e\x63\x69\145\163"); goto dkqtI; km7u0: ?>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD69a5buAacYnHDQHPos9SD45CjLPQt_2c&libraries=geometry,places"></script>
