@@ -755,7 +755,7 @@ function custom_woocommerce_thankyou_tracking_script() {
 
 
 /***************************************/
-
+/*    New Functionality start here     */
 /***************************************/
 
 /**
