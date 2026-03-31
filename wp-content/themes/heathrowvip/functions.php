@@ -757,7 +757,7 @@ function custom_woocommerce_thankyou_tracking_script() {
 /***************************************/
 /*    New Functionality start here     */
 /***************************************/
-
+  //////////// First Point Number of Bags Field start here  /////////////
 /**
  * Custom numeric-only text field on product page (Number of Bags).
  *
@@ -1063,3 +1063,4 @@ function hvip_baggage_gold_vip_note() {
 	echo wp_kses_post( __( 'One complimentary car is included in this quote. If the number of people and bags exceed what we can fit in the car we will contact you to upgrade your car options.', 'heathrowvip' ) );
 	echo '</div>';
 }
+  //////////// First Point Number of Bags Field end here  /////////////

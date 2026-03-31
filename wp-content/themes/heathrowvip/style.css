@@ -15906,4 +15906,8 @@ div#custom_cod_field p {
 .payment_box.payment_method_stripe > p {
     display: none !important;
 }
+.wc-pao-addon-id-1774942555 {
+	grid-column: span 6;
+}
+
 
