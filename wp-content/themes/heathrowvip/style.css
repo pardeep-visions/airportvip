@@ -15910,4 +15910,102 @@ div#custom_cod_field p {
 	grid-column: span 6;
 }
 
+.hvip-fast-track-field {
+	grid-column: span 6;
+	width: 100%;
+	margin-top: 10px;
+}
+
+.hvip-fast-track-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	margin: 0;
+	white-space: normal;
+	word-break: normal;
+}
+
+.hvip-fast-track-label input[type="checkbox"] {
+	margin: 0;
+	flex: 0 0 auto;
+}
+
+.hvip-fast-track-help {
+	margin: 6px 0 0;
+}
+
+.hvip-fast-track-help a {
+	display: inline-block;
+	white-space: normal;
+	word-break: normal;
+}
+
+.hvip-fast-track-qty-wrap {
+	margin: 8px 0 0;
+}
+
+.hvip-fast-track-qty-wrap label {
+	display: block;
+	margin-bottom: 4px;
+}
+
+.hvip-fast-track-qty-wrap select {
+	width: 100%;
+	max-width: 100%;
+}
+
+.hvip-fast-track-info-box {
+	margin-top: 8px;
+	padding: 10px 12px;
+	border: 1px solid #d9d9d9;
+	background: #f8f8f8;
+	color: #4a4a4a;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.hvip-fast-track-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+}
+
+.hvip-fast-track-modal__overlay {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.6);
+}
+
+.hvip-fast-track-modal__dialog {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: #fff;
+	max-width: 680px;
+	width: calc(100% - 30px);
+	margin: 0;
+	padding: 20px;
+	border-radius: 6px;
+	z-index: 2;
+	max-height: calc(100vh - 40px);
+	overflow-y: auto;
+}
+
+.hvip-fast-track-modal__close {
+	position: absolute;
+	right: 12px;
+	top: 8px;
+	background: none;
+	border: 0;
+	font-size: 24px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+body.hvip-fast-track-modal-open {
+	overflow: hidden;
+}
+
 

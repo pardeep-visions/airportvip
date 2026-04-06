@@ -788,6 +788,84 @@ function hvip_render_number_of_bags_field() {
 	echo '</div>';
 }
 
+add_action( 'woocommerce_before_add_to_cart_button', 'hvip_render_fast_track_field', 21 );
+function hvip_fast_track_is_supported_product( $product_id = 0 ) {
+	$product_id = absint( $product_id );
+	if ( ! $product_id ) {
+		global $post;
+		if ( $post && ! empty( $post->ID ) ) {
+			$product_id = (int) $post->ID;
+		}
+	}
+
+	if ( ! $product_id ) {
+		return false;
+	}
+
+	$slug = (string) get_post_field( 'post_name', $product_id );
+	$slug = sanitize_title( $slug );
+
+	if ( false !== strpos( $slug, 'arrival' ) ) {
+		return true;
+	}
+	if ( false !== strpos( $slug, 'departure' ) ) {
+		return true;
+	}
+
+	return false;
+}
+
+function hvip_render_fast_track_field() {
+	if ( ! is_product() ) {
+		return;
+	}
+	if ( ! hvip_fast_track_is_supported_product() ) {
+		return;
+	}
+
+	$enabled  = ! empty( $_POST['hvip_fast_track_enabled'] ) ? 'yes' : 'no';
+	$quantity = isset( $_POST['hvip_fast_track_quantity'] ) ? intval( $_POST['hvip_fast_track_quantity'] ) : 1;
+	$quantity = max( 1, min( 10, $quantity ) );
+
+	echo '<div class="wc-pao-addon wc-pao-addon-fast-track hvip-fast-track-field">';
+	echo '<label class="wc-pao-addon-name hvip-fast-track-label" for="hvip-fast-track-enabled">';
+	echo '<input type="checkbox" id="hvip-fast-track-enabled" name="hvip_fast_track_enabled" value="yes" ' . checked( 'yes', $enabled, false ) . ' />';
+	echo ' ' . esc_html__( 'Add Fast Track', 'heathrowvip' );
+	echo '</label>';
+
+	echo '<p class="form-row form-row-wide wc-pao-addon-wrap hvip-fast-track-qty-wrap" id="hvip-fast-track-qty-wrap" style="' . ( 'yes' === $enabled ? '' : 'display:none;' ) . '">';
+	echo '<label for="hvip-fast-track-quantity">' . esc_html__( 'Fast Track quantity', 'heathrowvip' ) . '</label> ';
+	echo '<select id="hvip-fast-track-quantity" name="hvip_fast_track_quantity">';
+	for ( $i = 1; $i <= 10; $i++ ) {
+		echo '<option value="' . esc_attr( (string) $i ) . '" ' . selected( $quantity, $i, false ) . '>' . esc_html( (string) $i ) . '</option>';
+	}
+	echo '</select>';
+	echo '</p>';
+
+	echo '<p class="hvip-fast-track-help">';
+	echo '<a href="#" id="hvip-fast-track-check-link">' . esc_html__( 'Check if Fast Track is included', 'heathrowvip' ) . '</a>';
+	echo '</p>';
+	echo '<div class="hvip-fast-track-info-box">';
+	echo esc_html__( 'Please check with your airline to confirm whether Fast Track is included in your ticket. If it is not included, you may book Fast Track using this option.', 'heathrowvip' );
+	echo '</div>';
+
+	wp_nonce_field( 'hvip_fast_track_nonce_action', 'hvip_fast_track_nonce' );
+
+	echo '</div>';
+
+	$popup_content = get_option( 'hvip_fast_track_popup_content', '' );
+	echo '<div id="hvip-fast-track-modal" class="hvip-fast-track-modal" style="display:none;" aria-hidden="true">';
+	echo '<div class="hvip-fast-track-modal__overlay"></div>';
+	echo '<div class="hvip-fast-track-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="hvip-fast-track-modal-title">';
+	echo '<button type="button" class="hvip-fast-track-modal__close" id="hvip-fast-track-modal-close" aria-label="' . esc_attr__( 'Close', 'heathrowvip' ) . '">&times;</button>';
+	echo '<h3 id="hvip-fast-track-modal-title">' . esc_html__( 'Fast Track Information', 'heathrowvip' ) . '</h3>';
+	echo '<div class="hvip-fast-track-modal__content">';
+	echo wp_kses_post( $popup_content );
+	echo '</div>';
+	echo '</div>';
+	echo '</div>';
+}
+
 add_filter( 'woocommerce_add_to_cart_validation', 'hvip_validate_number_of_bags_field', 10, 3 );
 function hvip_validate_number_of_bags_field( $passed, $product_id, $quantity ) {
 	if ( ! isset( $_POST['number-of-bags'] ) ) {
@@ -804,6 +882,40 @@ function hvip_validate_number_of_bags_field( $passed, $product_id, $quantity ) {
 
 	if ( ! preg_match( '/^\d+$/', $value ) ) {
 		wc_add_notice( __( 'Please enter numbers only.', 'heathrowvip' ), 'error' );
+		return false;
+	}
+
+	return $passed;
+}
+
+add_filter( 'woocommerce_add_to_cart_validation', 'hvip_validate_fast_track_fields', 11, 3 );
+function hvip_validate_fast_track_fields( $passed, $product_id, $quantity ) {
+	$has_fast_track_fields = isset( $_POST['hvip_fast_track_enabled'] ) || isset( $_POST['hvip_fast_track_quantity'] ) || isset( $_POST['hvip_fast_track_nonce'] );
+	if ( ! $has_fast_track_fields ) {
+		return $passed;
+	}
+	if ( ! hvip_fast_track_is_supported_product( $product_id ) ) {
+		return $passed;
+	}
+
+	$nonce = isset( $_POST['hvip_fast_track_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['hvip_fast_track_nonce'] ) ) : '';
+	if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'hvip_fast_track_nonce_action' ) ) {
+		wc_add_notice( __( 'Security check failed. Please try again.', 'heathrowvip' ), 'error' );
+		return false;
+	}
+
+	$enabled = isset( $_POST['hvip_fast_track_enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['hvip_fast_track_enabled'] ) ) : 'no';
+	$enabled = ( 'yes' === $enabled ) ? 'yes' : 'no';
+
+	if ( 'yes' !== $enabled ) {
+		return $passed;
+	}
+
+	$qty_raw   = isset( $_POST['hvip_fast_track_quantity'] ) ? sanitize_text_field( wp_unslash( $_POST['hvip_fast_track_quantity'] ) ) : '1';
+	$qty       = intval( $qty_raw );
+	$is_in_set = in_array( $qty, range( 1, 10 ), true );
+	if ( ! $is_in_set ) {
+		wc_add_notice( __( 'Please choose a valid Fast Track quantity (1-10).', 'heathrowvip' ), 'error' );
 		return false;
 	}
 
@@ -922,6 +1034,56 @@ function hvip_baggage_add_cart_item_data( $cart_item_data, $product_id, $variati
 	return $cart_item_data;
 }
 
+add_filter( 'woocommerce_add_cart_item_data', 'hvip_fast_track_add_cart_item_data', 11, 3 );
+function hvip_fast_track_add_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
+	if ( ! hvip_fast_track_is_supported_product( $product_id ) ) {
+		return $cart_item_data;
+	}
+
+	$nonce = isset( $_POST['hvip_fast_track_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['hvip_fast_track_nonce'] ) ) : '';
+	if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'hvip_fast_track_nonce_action' ) ) {
+		return $cart_item_data;
+	}
+
+	$enabled = isset( $_POST['hvip_fast_track_enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['hvip_fast_track_enabled'] ) ) : 'no';
+	$enabled = ( 'yes' === $enabled ) ? 'yes' : 'no';
+
+	$qty_raw = isset( $_POST['hvip_fast_track_quantity'] ) ? sanitize_text_field( wp_unslash( $_POST['hvip_fast_track_quantity'] ) ) : '1';
+	$qty     = intval( $qty_raw );
+	if ( $qty < 1 || $qty > 10 ) {
+		$qty = 1;
+	}
+
+	$product = wc_get_product( $variation_id ? $variation_id : $product_id );
+	if ( ! $product ) {
+		return $cart_item_data;
+	}
+
+	$slug             = get_post_field( 'post_name', $product_id );
+	$is_arrival       = ( false !== strpos( (string) $slug, 'arrival' ) );
+	$per_person_price = $is_arrival ? 35 : 25;
+	if ( 'yes' !== $enabled ) {
+		$qty = 0;
+	}
+	$fast_track_total = ( 'yes' === $enabled ) ? ( $qty * $per_person_price ) : 0;
+
+	$cart_item_data['hvip_fast_track_enabled']    = $enabled;
+	$cart_item_data['hvip_fast_track_quantity']   = $qty;
+	$cart_item_data['hvip_fast_track_total']      = (float) $fast_track_total;
+	$cart_item_data['hvip_fast_track_price_each'] = (float) $per_person_price;
+
+	// Ensure line item stays separate when Fast Track choice differs.
+	$cart_item_data['unique_key'] = md5( microtime( true ) . wp_rand() );
+
+	// Shared base-price lock used in before_calculate_totals.
+	if ( ! isset( $cart_item_data['hvip_base_price'] ) ) {
+		$cart_item_data['hvip_base_price']     = null;
+		$cart_item_data['hvip_base_price_set'] = false;
+	}
+
+	return $cart_item_data;
+}
+
 add_action( 'woocommerce_before_calculate_totals', 'hvip_baggage_apply_price', 20, 1 );
 function hvip_baggage_apply_price( $cart ) {
 	if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
@@ -935,7 +1097,9 @@ function hvip_baggage_apply_price( $cart ) {
 		if ( empty( $cart_item['data'] ) || ! is_a( $cart_item['data'], 'WC_Product' ) ) {
 			continue;
 		}
-		if ( ! isset( $cart_item['hvip_bags_count'] ) ) {
+		$has_baggage    = isset( $cart_item['hvip_bags_count'] );
+		$has_fast_track = isset( $cart_item['hvip_fast_track_enabled'] );
+		if ( ! $has_baggage && ! $has_fast_track ) {
 			continue;
 		}
 
@@ -949,58 +1113,190 @@ function hvip_baggage_apply_price( $cart ) {
 		$base = isset( $cart_item['hvip_base_price'] ) && is_numeric( $cart_item['hvip_base_price'] )
 			? (float) $cart_item['hvip_base_price']
 			: (float) $cart_item['data']->get_price( 'edit' );
-		$fee  = isset( $cart_item['hvip_bags_fee'] ) ? (float) $cart_item['hvip_bags_fee'] : 0.0;
+		$baggage_fee      = isset( $cart_item['hvip_bags_fee'] ) ? (float) $cart_item['hvip_bags_fee'] : 0.0;
+		$fast_track_total = ( isset( $cart_item['hvip_fast_track_enabled'] ) && 'yes' === $cart_item['hvip_fast_track_enabled'] )
+			? ( isset( $cart_item['hvip_fast_track_total'] ) ? (float) $cart_item['hvip_fast_track_total'] : 0.0 )
+			: 0.0;
 
-		$cart_item['data']->set_price( $base + $fee );
+		$cart_item['data']->set_price( $base + $baggage_fee + $fast_track_total );
 	}
 }
 
 add_filter( 'woocommerce_get_item_data', 'hvip_baggage_item_data', 10, 2 );
 function hvip_baggage_item_data( $item_data, $cart_item ) {
-	if ( ! isset( $cart_item['hvip_bags_count'] ) ) {
+	$has_baggage    = isset( $cart_item['hvip_bags_count'] );
+	$has_fast_track = isset( $cart_item['hvip_fast_track_enabled'] );
+	if ( ! $has_baggage && ! $has_fast_track ) {
 		return $item_data;
 	}
 
-	$bags     = absint( $cart_item['hvip_bags_count'] );
-	$included = isset( $cart_item['hvip_bags_included'] ) ? absint( $cart_item['hvip_bags_included'] ) : 0;
-	$extra    = max( 0, $bags - $included );
-	$fee      = isset( $cart_item['hvip_bags_fee'] ) ? (float) $cart_item['hvip_bags_fee'] : 0.0;
+	if ( $has_baggage ) {
+		$bags     = absint( $cart_item['hvip_bags_count'] );
+		$included = isset( $cart_item['hvip_bags_included'] ) ? absint( $cart_item['hvip_bags_included'] ) : 0;
+		$extra    = max( 0, $bags - $included );
+		$fee      = isset( $cart_item['hvip_bags_fee'] ) ? (float) $cart_item['hvip_bags_fee'] : 0.0;
 
-	$item_data[] = array(
-		'key'   => __( 'Number of Bags', 'heathrowvip' ),
-		'value' => (string) $bags,
-	);
-	$item_data[] = array(
-		'key'   => __( 'Included bags', 'heathrowvip' ),
-		'value' => (string) $included,
-	);
-	$item_data[] = array(
-		'key'   => __( 'Extra bags', 'heathrowvip' ),
-		'value' => (string) $extra,
-	);
-	$item_data[] = array(
-		'key'   => __( 'Extra baggage fee', 'heathrowvip' ),
-		'value' => $fee > 0 ? wc_price( $fee ) : __( 'Free', 'heathrowvip' ),
-	);
+		$item_data[] = array(
+			'key'   => __( 'Number of Bags', 'heathrowvip' ),
+			'value' => (string) $bags,
+		);
+		$item_data[] = array(
+			'key'   => __( 'Included bags', 'heathrowvip' ),
+			'value' => (string) $included,
+		);
+		$item_data[] = array(
+			'key'   => __( 'Extra bags', 'heathrowvip' ),
+			'value' => (string) $extra,
+		);
+		$item_data[] = array(
+			'key'   => __( 'Extra baggage fee', 'heathrowvip' ),
+			'value' => $fee > 0 ? wc_price( $fee ) : __( 'Free', 'heathrowvip' ),
+		);
+	}
+
+	if ( isset( $cart_item['hvip_fast_track_enabled'] ) ) {
+		$enabled = sanitize_text_field( (string) $cart_item['hvip_fast_track_enabled'] );
+		$qty     = isset( $cart_item['hvip_fast_track_quantity'] ) ? intval( $cart_item['hvip_fast_track_quantity'] ) : 0;
+		$total   = isset( $cart_item['hvip_fast_track_total'] ) ? (float) $cart_item['hvip_fast_track_total'] : 0.0;
+
+		$item_data[] = array(
+			'key'   => __( 'Fast Track', 'heathrowvip' ),
+			'value' => ( 'yes' === $enabled ) ? esc_html__( 'Yes', 'heathrowvip' ) : esc_html__( 'No', 'heathrowvip' ),
+		);
+		$item_data[] = array(
+			'key'   => __( 'Quantity', 'heathrowvip' ),
+			'value' => esc_html( (string) max( 0, $qty ) ),
+		);
+		$item_data[] = array(
+			'key'   => __( 'Fast Track Cost', 'heathrowvip' ),
+			'value' => wp_kses_post( wc_price( max( 0, $total ) ) ),
+		);
+	}
 
 	return $item_data;
 }
 
 add_action( 'woocommerce_checkout_create_order_line_item', 'hvip_baggage_add_order_item_meta', 10, 4 );
 function hvip_baggage_add_order_item_meta( $item, $cart_item_key, $values, $order ) {
-	if ( empty( $values['hvip_bags_count'] ) ) {
+	$has_baggage    = ! empty( $values['hvip_bags_count'] );
+	$has_fast_track = isset( $values['hvip_fast_track_enabled'] );
+	if ( ! $has_baggage && ! $has_fast_track ) {
 		return;
 	}
 
-	$bags     = absint( $values['hvip_bags_count'] );
-	$included = isset( $values['hvip_bags_included'] ) ? absint( $values['hvip_bags_included'] ) : 0;
-	$extra    = max( 0, $bags - $included );
-	$fee      = isset( $values['hvip_bags_fee'] ) ? (float) $values['hvip_bags_fee'] : 0.0;
+	if ( $has_baggage ) {
+		$bags     = absint( $values['hvip_bags_count'] );
+		$included = isset( $values['hvip_bags_included'] ) ? absint( $values['hvip_bags_included'] ) : 0;
+		$extra    = max( 0, $bags - $included );
+		$fee      = isset( $values['hvip_bags_fee'] ) ? (float) $values['hvip_bags_fee'] : 0.0;
 
-	$item->add_meta_data( __( 'Number of Bags', 'heathrowvip' ), $bags, true );
-	$item->add_meta_data( __( 'Included bags', 'heathrowvip' ), $included, true );
-	$item->add_meta_data( __( 'Extra bags', 'heathrowvip' ), $extra, true );
-	$item->add_meta_data( __( 'Extra baggage fee', 'heathrowvip' ), $fee > 0 ? wc_price( $fee ) : __( 'Free', 'heathrowvip' ), true );
+		$item->add_meta_data( __( 'Number of Bags', 'heathrowvip' ), $bags, true );
+		$item->add_meta_data( __( 'Included bags', 'heathrowvip' ), $included, true );
+		$item->add_meta_data( __( 'Extra bags', 'heathrowvip' ), $extra, true );
+		$item->add_meta_data( __( 'Extra baggage fee', 'heathrowvip' ), $fee > 0 ? wc_price( $fee ) : __( 'Free', 'heathrowvip' ), true );
+	}
+
+	if ( isset( $values['hvip_fast_track_enabled'] ) ) {
+		$enabled = sanitize_text_field( (string) $values['hvip_fast_track_enabled'] );
+		$qty     = isset( $values['hvip_fast_track_quantity'] ) ? intval( $values['hvip_fast_track_quantity'] ) : 0;
+		$total   = isset( $values['hvip_fast_track_total'] ) ? (float) $values['hvip_fast_track_total'] : 0.0;
+
+		$item->add_meta_data( __( 'Fast Track', 'heathrowvip' ), ( 'yes' === $enabled ) ? 'Yes' : 'No', true );
+		$item->add_meta_data( __( 'Fast Track Quantity', 'heathrowvip' ), max( 0, $qty ), true );
+		$item->add_meta_data( __( 'Fast Track Cost', 'heathrowvip' ), wc_price( $total ), true );
+	}
+}
+
+add_action( 'admin_menu', 'hvip_fast_track_add_settings_page' );
+function hvip_fast_track_add_settings_page() {
+	add_options_page(
+		__( 'Fast Track Popup', 'heathrowvip' ),
+		__( 'Fast Track Popup', 'heathrowvip' ),
+		'manage_options',
+		'hvip-fast-track-popup',
+		'hvip_fast_track_render_settings_page'
+	);
+}
+
+function hvip_fast_track_render_settings_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	if ( isset( $_POST['hvip_fast_track_popup_save'] ) ) {
+		check_admin_referer( 'hvip_fast_track_popup_save_action', 'hvip_fast_track_popup_nonce' );
+		$posted_content = isset( $_POST['hvip_fast_track_popup_content'] ) ? wp_kses_post( wp_unslash( $_POST['hvip_fast_track_popup_content'] ) ) : '';
+		update_option( 'hvip_fast_track_popup_content', $posted_content );
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Fast Track popup content updated.', 'heathrowvip' ) . '</p></div>';
+	}
+	?>
+	<div class="wrap">
+		<h1><?php echo esc_html__( 'Fast Track Popup Content', 'heathrowvip' ); ?></h1>
+		<form method="post" action="">
+			<?php wp_nonce_field( 'hvip_fast_track_popup_save_action', 'hvip_fast_track_popup_nonce' ); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php echo esc_html__( 'Popup content', 'heathrowvip' ); ?></th>
+					<td>
+						<?php
+						$content = get_option( 'hvip_fast_track_popup_content', '' );
+						wp_editor(
+							wp_kses_post( $content ),
+							'hvip_fast_track_popup_content',
+							array(
+								'textarea_name' => 'hvip_fast_track_popup_content',
+								'media_buttons' => false,
+								'textarea_rows' => 10,
+							)
+						);
+						?>
+					</td>
+				</tr>
+			</table>
+			<input type="hidden" name="hvip_fast_track_popup_save" value="1" />
+			<?php submit_button(); ?>
+		</form>
+	</div>
+	<?php
+}
+
+add_action( 'wp_enqueue_scripts', 'hvip_enqueue_fast_track_script', 27 );
+function hvip_enqueue_fast_track_script() {
+	if ( ! is_product() ) {
+		return;
+	}
+	if ( ! hvip_fast_track_is_supported_product() ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'hvip-fast-track',
+		get_stylesheet_directory_uri() . '/assets/js/fast-track.js',
+		array( 'jquery' ),
+		null,
+		true
+	);
+
+	global $post;
+	$is_arrival = false;
+	if ( $post && ! empty( $post->post_name ) ) {
+		$is_arrival = ( false !== strpos( (string) $post->post_name, 'arrival' ) );
+	}
+
+	wp_localize_script(
+		'hvip-fast-track',
+		'hvipFastTrackConfig',
+		array(
+			'is_arrival'      => $is_arrival ? 'yes' : 'no',
+			'arrival_price'   => 35,
+			'departure_price' => 25,
+			'currency_sym'    => get_woocommerce_currency_symbol(),
+			'decimal_sep'     => wc_get_price_decimal_separator(),
+			'thousand_sep'    => wc_get_price_thousand_separator(),
+			'decimals'        => wc_get_price_decimals(),
+			'price_format'    => get_woocommerce_price_format(),
+		)
+	);
 }
 
 add_action( 'wp_enqueue_scripts', 'hvip_baggage_enqueue_pricing_js', 26 );

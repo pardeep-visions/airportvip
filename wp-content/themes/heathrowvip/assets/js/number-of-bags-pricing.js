@@ -197,11 +197,40 @@
 		return $();
 	}
 
-	function setOrUpdateSummary(fee, freeText) {
-		var feeText = fee > 0 ? formatMoney(fee) : freeText;
+	function getFastTrackFee() {
+		var cfg = window.hvipFastTrackConfig || {};
+		var $enabled = $('#hvip-fast-track-enabled');
+		var $qty = $('#hvip-fast-track-quantity');
+		if (!$enabled.length || !$enabled.is(':checked')) {
+			return 0;
+		}
+
+		var qty = parseInt(($qty.val() || '1'), 10);
+		if (isNaN(qty) || qty < 1) {
+			qty = 1;
+		}
+
+		var perPerson = cfg.is_arrival === 'yes' ? parseFloat(cfg.arrival_price) : parseFloat(cfg.departure_price);
+		if (isNaN(perPerson)) {
+			perPerson = cfg.is_arrival === 'yes' ? 35 : 25;
+		}
+
+		return qty * perPerson;
+	}
+
+	function isFastTrackSelected() {
+		var $enabled = $('#hvip-fast-track-enabled');
+		return $enabled.length && $enabled.is(':checked');
+	}
+
+	function setOrUpdateSummary(baggageFee, fastTrackFee, freeText) {
+		var baggageFeeText = baggageFee > 0 ? formatMoney(baggageFee) : freeText;
+		var fastTrackFeeText = fastTrackFee > 0 ? formatMoney(fastTrackFee) : freeText;
+		var showFastTrackLine = isFastTrackSelected();
 
 		// Remove any previously injected lines in ANY totals blocks (prevents showing in upper area).
 		$('.product-addon-totals li.hvip-bags-fee-line').remove();
+		$('.product-addon-totals li.hvip-fast-track-fee-line').remove();
 
 		// 1) Preferred: inject as a proper row into the bottom-most `.product-addon-totals` list (main summary box).
 		var $mainTotals = getMainSummaryTotalsBox();
@@ -214,6 +243,15 @@
 						'<div class="wc-pao-col2"><span class="amount"></span></div>' +
 					'</li>'
 				);
+				var $liFastTrack = $();
+				if (showFastTrackLine) {
+					$liFastTrack = $(
+						'<li class="hvip-fast-track-fee-line">' +
+							'<div class="wc-pao-col1"><strong>Fast Track fee:</strong></div>' +
+							'<div class="wc-pao-col2"><span class="amount"></span></div>' +
+						'</li>'
+					);
+				}
 
 				var $subtotalRow = $ul.find('li').filter(function () {
 					return /subtotal/i.test($(this).text());
@@ -221,11 +259,20 @@
 
 				if ($subtotalRow.length) {
 					$subtotalRow.before($li);
+					if ($liFastTrack.length) {
+						$subtotalRow.before($liFastTrack);
+					}
 				} else {
 					$ul.append($li);
+					if ($liFastTrack.length) {
+						$ul.append($liFastTrack);
+					}
 				}
 
-				$li.find('.wc-pao-col2 .amount').text(feeText);
+				$li.find('.wc-pao-col2 .amount').text(baggageFeeText);
+				if ($liFastTrack.length) {
+					$liFastTrack.find('.wc-pao-col2 .amount').text(fastTrackFeeText);
+				}
 				return;
 			}
 		}
@@ -252,7 +299,23 @@
 			$row.before($existing);
 		}
 
-		$existing.find('.hvip-value').text(feeText);
+		$existing.find('.hvip-value').text(baggageFeeText);
+
+		var $existingFastTrack = $('.hvip-summary-fast-track-fee');
+		if (!showFastTrackLine) {
+			$existingFastTrack.remove();
+		} else {
+			if (!$existingFastTrack.length) {
+				$existingFastTrack = $(
+					'<div class="hvip-summary-fast-track-fee" style="display:flex;justify-content:space-between;gap:12px;margin:6px 0;">' +
+						'<span class="hvip-label"><strong>Fast Track fee:</strong></span>' +
+						'<span class="hvip-value"></span>' +
+					'</div>'
+				);
+				$row.before($existingFastTrack);
+			}
+			$existingFastTrack.find('.hvip-value').text(fastTrackFeeText);
+		}
 	}
 
 	$(function () {
@@ -279,7 +342,9 @@
 			// Your theme uses `#_wc_booking_time_slot` and may render it as <select> or <input type="time">.
 			var $time = $('#_wc_booking_time_slot');
 			if (!$time.length) {
-				return false;
+				// On some products/time configurations this field is not rendered.
+				// Do not block Number of Bags in that case.
+				return true;
 			}
 
 			if ($time.is(':disabled')) {
@@ -320,19 +385,18 @@
 		function update() {
 			var startTimeReady = isBookingStartTimeEnabled();
 			setFieldEnabled(startTimeReady);
+			var fastTrackFee = getFastTrackFee();
 			if (!startTimeReady) {
 				return;
 			}
 
 			var raw = ($field.val() || '').trim();
-			if (!/^\d+$/.test(raw)) {
-				// If invalid, don't attempt pricing update (validation script will show message).
-				return;
-			}
-
-			var bags = clampInt(raw, 1);
 			var included = parseInt(p.included, 10) || 0;
-			var fee = extraFee(bags, included, p.block_size, p.fee_per_block);
+			var baggageFee = 0;
+			if (/^\d+$/.test(raw)) {
+				var bags = clampInt(raw, 1);
+				baggageFee = extraFee(bags, included, p.block_size, p.fee_per_block);
+			}
 
 			// Update the displayed total (Bookings cost + totals table) to match backend pricing.
 			var base = getBookingsBaseCost();
@@ -344,11 +408,11 @@
 				}
 			}
 			if (base && base > 0) {
-				updateDisplayedTotals(base + fee, fee, freeText);
+				updateDisplayedTotals(base + baggageFee + fastTrackFee, baggageFee, freeText);
 			}
 
-			// Render fee only inside the bottom Summary Box (before Subtotal).
-			setOrUpdateSummary(fee, freeText);
+			// Render both fee lines inside the bottom Summary Box (before Subtotal).
+			setOrUpdateSummary(baggageFee, fastTrackFee, freeText);
 		}
 
 		var scheduleUpdate = debounce(update, 100);
