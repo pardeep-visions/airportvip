@@ -129,6 +129,7 @@ $files = [
      */
     '/woocommerce/woocommerce-functions.php',
      '/woocommerce-bookings/functions.php',
+    '/lib/booking-pdf.php',
 ];
 
 foreach ($files as $file) {
@@ -559,7 +560,6 @@ function custom_cod_title($title, $id) {
         $title = 'Invoice Payment (Pay By Invoice)';
     }
     return $title;
-
 }
 
 // Add a custom setting field to the WooCommerce settings
@@ -784,7 +784,7 @@ function hvip_render_number_of_bags_field() {
 	echo '<p class="form-row form-row-wide wc-pao-addon-wrap">';
 	echo '<input type="text" class="input-text" id="number-of-bags" name="number-of-bags" value="' . esc_attr( $value ) . '" inputmode="numeric" required disabled="disabled" aria-disabled="true" />';
 	echo '</p>';
-	echo '<span class="hvip-number-of-bags-error" role="alert" style="display:none;"></span>';
+	echo '<span class="hvip-number-of-bags-error" role="alert" style="display:none;color:#e2401c;"></span>';
 	echo '</div>';
 }
 
@@ -834,7 +834,7 @@ function hvip_render_fast_track_field() {
 	echo '</label>';
 
 	echo '<p class="form-row form-row-wide wc-pao-addon-wrap hvip-fast-track-qty-wrap" id="hvip-fast-track-qty-wrap" style="' . ( 'yes' === $enabled ? '' : 'display:none;' ) . '">';
-	echo '<label for="hvip-fast-track-quantity">' . esc_html__( 'Fast Track quantity', 'heathrowvip' ) . '</label> ';
+	echo '<label class="wc-pao-addon-name" for="hvip-fast-track-quantity">' . esc_html__( 'Fast Track quantity', 'heathrowvip' ) . '</label> ';
 	echo '<select id="hvip-fast-track-quantity" name="hvip_fast_track_quantity">';
 	for ( $i = 1; $i <= 10; $i++ ) {
 		echo '<option value="' . esc_attr( (string) $i ) . '" ' . selected( $quantity, $i, false ) . '>' . esc_html( (string) $i ) . '</option>';
@@ -845,6 +845,57 @@ function hvip_render_fast_track_field() {
 	echo '<p class="hvip-fast-track-help">';
 	echo '<a href="#" id="hvip-fast-track-check-link">' . esc_html__( 'Check if Fast Track is included', 'heathrowvip' ) . '</a>';
 	echo '</p>';
+	echo '<style>
+	.hvip-fast-track-field {
+		grid-column: 1 / -1 !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+	.hvip-fast-track-field .hvip-fast-track-help {
+		margin: 8px 0 10px;
+	}
+	.hvip-fast-track-field #hvip-fast-track-check-link {
+		font-size: 24px;
+		line-height: 1.2;
+		color: #0d7fa6;
+		font-weight: 400;
+		text-decoration: underline;
+	}
+	.hvip-fast-track-field .hvip-fast-track-info-box {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+		display: block;
+		float: none;
+		clear: both;
+		border: 1px solid #2f5f9e;
+		background: #eaf2ff;
+		color: #0f2d52;
+		font-size: 15px;
+		font-style: italic;
+		line-height: 1.55;
+		padding: 20px 24px;
+		margin: 0 0 14px;
+	}
+	@media (max-width: 1024px) {
+		.hvip-fast-track-field #hvip-fast-track-check-link {
+			font-size: 20px;
+		}
+		.hvip-fast-track-field .hvip-fast-track-info-box {
+			font-size: 14px;
+			padding: 16px 18px;
+		}
+	}
+	@media (max-width: 767px) {
+		.hvip-fast-track-field #hvip-fast-track-check-link {
+			font-size: 18px;
+		}
+		.hvip-fast-track-field .hvip-fast-track-info-box {
+			font-size: 13px;
+			padding: 12px 14px;
+		}
+	}
+	</style>';
 	echo '<div class="hvip-fast-track-info-box">';
 	echo esc_html__( 'Please check with your airline to confirm whether Fast Track is included in your ticket. If it is not included, you may book Fast Track using this option.', 'heathrowvip' );
 	echo '</div>';
@@ -932,7 +983,7 @@ function hvip_enqueue_number_of_bags_validation_script() {
 		'hvip-number-of-bags-validation',
 		get_stylesheet_directory_uri() . '/assets/js/number-of-bags-validation.js',
 		array( 'jquery' ),
-		null,
+		file_exists( get_stylesheet_directory() . '/assets/js/number-of-bags-validation.js' ) ? filemtime( get_stylesheet_directory() . '/assets/js/number-of-bags-validation.js' ) : null,
 		true
 	);
 
@@ -969,6 +1020,11 @@ function hvip_baggage_get_service_level_from_slug( $product_slug ) {
 	}
 
 	return 'unknown';
+}
+
+function hvip_baggage_is_vip_lounge_slug( $product_slug ) {
+	$product_slug = sanitize_title( (string) $product_slug );
+	return ( false !== strpos( $product_slug, 'vip-lounge' ) );
 }
 
 function hvip_baggage_included_limit( $service_level ) {
@@ -1017,13 +1073,15 @@ function hvip_baggage_add_cart_item_data( $cart_item_data, $product_id, $variati
 
 	$slug          = get_post_field( 'post_name', $product_id );
 	$service_level = hvip_baggage_get_service_level_from_slug( $slug );
-	$included      = hvip_baggage_included_limit( $service_level );
-	$fee           = hvip_baggage_extra_fee( $bags, $service_level );
+	$is_vip_lounge = hvip_baggage_is_vip_lounge_slug( $slug );
+	$included      = $is_vip_lounge ? $bags : hvip_baggage_included_limit( $service_level );
+	$fee           = $is_vip_lounge ? 0.0 : hvip_baggage_extra_fee( $bags, $service_level );
 
 	$cart_item_data['hvip_bags_count']     = $bags;
 	$cart_item_data['hvip_bags_included']  = $included;
 	$cart_item_data['hvip_bags_fee']       = (float) $fee;
 	$cart_item_data['hvip_service_level']  = $service_level;
+	$cart_item_data['hvip_is_vip_lounge']  = $is_vip_lounge ? 'yes' : 'no';
 	// Base price for bookings is determined later (after Bookings calculates cost).
 	$cart_item_data['hvip_base_price']     = null;
 	$cart_item_data['hvip_base_price_set'] = false;
@@ -1311,7 +1369,9 @@ function hvip_baggage_enqueue_pricing_js() {
 	}
 
 	$service_level = hvip_baggage_get_service_level_from_slug( $post->post_name );
+	$is_vip_lounge = hvip_baggage_is_vip_lounge_slug( $post->post_name );
 	$included      = hvip_baggage_included_limit( $service_level );
+	$included_js   = $is_vip_lounge ? 999999 : $included;
 
 	wp_enqueue_script(
 		'hvip-number-of-bags-pricing',
@@ -1326,7 +1386,8 @@ function hvip_baggage_enqueue_pricing_js() {
 		'hvipNumberOfBagsPricing',
 		array(
 			'service_level' => $service_level,
-			'included'      => $included,
+			'included'      => $included_js,
+			'is_vip_lounge' => $is_vip_lounge ? 'yes' : 'no',
 			'fee_per_block' => 50,
 			'block_size'    => 8,
 			'currency_sym'  => get_woocommerce_currency_symbol(),
@@ -1355,8 +1416,53 @@ function hvip_baggage_gold_vip_note() {
 		return;
 	}
 
-	echo '<div class="woocommerce-info hvip-complimentary-car-note">';
-	echo wp_kses_post( __( 'One complimentary car is included in this quote. If the number of people and bags exceed what we can fit in the car we will contact you to upgrade your car options.', 'heathrowvip' ) );
+	echo '<style>
+	.hvip-complimentary-car-note {
+		position: relative;
+		margin: 18px 0 14px;
+		padding: 18px 68px 18px 24px;
+		border: 1px solid #2f5f9e;
+		background: #eaf2ff;
+		color: #0f2d52;
+		font-size: 16px;
+		line-height: 1.45;
+		font-weight: 400;
+	}
+	.hvip-complimentary-car-note__icon {
+		position: absolute;
+		right: 14px;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 42px;
+		height: 42px;
+		border-radius: 50%;
+		background: #d9e7ff;
+		color: #7d96bd;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 30px;
+		font-weight: 700;
+		font-family: Georgia, serif;
+	}
+	@media (max-width: 767px) {
+		.hvip-complimentary-car-note {
+			font-size: 14px;
+			padding: 14px 56px 14px 16px;
+		}
+		.hvip-complimentary-car-note__icon {
+			width: 34px;
+			height: 34px;
+			font-size: 24px;
+		}
+	}
+	</style>';
+
+	echo '<div class="hvip-complimentary-car-note">';
+	echo '<span class="hvip-complimentary-car-note__text">' . esc_html__( 'One complimentary car is included in this quote. If the number of people and bags exceed what we can fit in the car we will contact you to upgrade your car options.', 'heathrowvip' ) . '</span>';
+	echo '<span class="hvip-complimentary-car-note__icon" aria-hidden="true">i</span>';
 	echo '</div>';
 }
+
+
   //////////// First Point Number of Bags Field end here  /////////////

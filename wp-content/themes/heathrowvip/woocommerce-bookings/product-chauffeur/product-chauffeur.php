@@ -1032,7 +1032,13 @@ class ChauffeurBookingProduct
     {
         global $product;
         $checkExists = strpos($template, 'woocommerce-bookings/templates/booking-form/select.php');
-        if ($checkExists !== false && $product->get_meta('_chauffeur') && $product->get_meta('_chauffeur') === 'yes') {
+        if (
+            $checkExists !== false
+            && $product
+            && is_a($product, 'WC_Product')
+            && $product->get_meta('_chauffeur')
+            && $product->get_meta('_chauffeur') === 'yes'
+        ) {
             $template = locate_template(
                 [CHAUFFEUR_REDIRECTION.'/templates/resources.php']
             );

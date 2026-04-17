@@ -15182,6 +15182,22 @@ input[type="color"], input[type="date"], input[type="datetime-local"], input[typ
     border-color: #d9d9d9;
 }
 
+/* Match Class of Travel dropdown with other addon dropdown styling */
+select#addon-2924-1774942555  {
+    width: 100% !important;
+    min-height: 42px;
+    border-color: #d9d9d9;
+    border-radius: 0;
+    font-size: 12px;
+}
+select#hvip-fast-track-quantity{
+    width: 100% !important;
+    min-height: 42px;
+    border-color: #d9d9d9;
+    border-radius: 0;
+    font-size: 12px;
+}
+
 
 .wc-pao-addon-container.wc-pao-addon.wc-pao-addon-special-needs p {
     font-size: 14px;

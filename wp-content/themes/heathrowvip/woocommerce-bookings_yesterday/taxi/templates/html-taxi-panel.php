@@ -15,4 +15,4 @@
 > <label for="restrict_to"><?php  goto DQ0sg; i97Cu: esc_attr_e("\x54\157\40\141\x64\144\x72\x65\163\163"); goto LRhXQ; jguCS: checked("\171\x65\x73", $restrict_location); goto SJAQZ; NqyVP: ?>
 </label> <input name="restrict_from_locations"type="hidden"></div><div class="from-address"><div class="flex"><input name="from_address"id="from_address"value="<?php  goto Z7t7D; U_Prg: ?>
 "class="regular-text"placeholder="<?php  goto i97Cu; qrlzm: ?>
-</select> <button class="add_car button"type="button">Add</button></div><div class="taxi-car-items"id="taxi-car-items"></div></div>
+</select> <button class="add_car button"type="button">Add</button></div><div class="taxi-car-items dddddddddd"id="taxi-car-items"></div></div>
