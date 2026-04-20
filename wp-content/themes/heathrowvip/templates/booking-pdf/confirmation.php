@@ -138,6 +138,7 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
       <table>
         <tr><th>Product</th><th style="width:25%;">Total</th></tr>
         <?php $items_full = $ctx['order_items_full'] ?? []; ?>
+        <?php $hide_order_totals = ! empty( $ctx['hide_order_totals'] ); ?>
         <?php if ( ! empty( $items_full ) ) : foreach ( $items_full as $item_row ) : ?>
           <tr>
             <td><strong><?php echo esc_html( (string) $item_row['product_name'] ); ?> × <?php echo esc_html( (string) $item_row['quantity'] ); ?></strong>
@@ -148,9 +149,11 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
         <?php endforeach; else : ?>
           <tr><td>—</td><td>—</td></tr>
         <?php endif; ?>
-        <tr><th>Subtotal</th><td><?php echo wp_kses_post( (string) ( $ctx['order_subtotal'] ?? '—' ) ); ?></td></tr>
-        <tr><th>VAT</th><td><?php echo wp_kses_post( (string) ( $ctx['order_tax'] ?? '—' ) ); ?></td></tr>
-        <tr><th>Total</th><td><?php echo wp_kses_post( (string) ( $ctx['order_total'] ?? '—' ) ); ?></td></tr>
+        <?php if ( ! $hide_order_totals ) : ?>
+          <tr><th>Subtotal</th><td><?php echo wp_kses_post( (string) ( $ctx['order_subtotal'] ?? '—' ) ); ?></td></tr>
+          <tr><th>VAT</th><td><?php echo wp_kses_post( (string) ( $ctx['order_tax'] ?? '—' ) ); ?></td></tr>
+          <tr><th>Total</th><td><?php echo wp_kses_post( (string) ( $ctx['order_total'] ?? '—' ) ); ?></td></tr>
+        <?php endif; ?>
       </table>
       <div class="simple-box"><strong>Billing address</strong><br/><?php foreach ( ( $ctx['billing_address_lines'] ?? [] ) as $line ) { echo esc_html( (string) $line ) . '<br/>'; } ?></div>
     </div>

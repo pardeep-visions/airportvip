@@ -7,6 +7,7 @@ final class HVIP_Booking_Functionality {
 	const M_CHAUFFEUR_NAME = '_hvip_chauffeur_name';
 	const M_CHAUFFEUR_EMAIL = '_hvip_chauffeur_email';
 	const M_CHAUFFEUR_CONTACT = '_hvip_chauffeur_contact';
+	const M_BOOKING_CONTACTS_SET = '_hvip_booking_contacts_set';
 	const M_PDF_PATH = '_hvip_booking_pdf_path';
 	const M_PDF_DONE = '_hvip_booking_pdf_generated';
 	const M_PRIMARY_BOOKING_ID = '_hvip_primary_booking_id';
@@ -313,7 +314,8 @@ final class HVIP_Booking_Functionality {
 
 	public static function register_box( $post ) {
 		$order = self::booking_order( $post->ID ?? 0 );
-		if ( ! $order || ! self::is_arrival_departure_gold_booking( $order ) ) {
+		$booking = function_exists( 'get_wc_booking' ) ? get_wc_booking( absint( $post->ID ?? 0 ) ) : null;
+		if ( ! $order || ! self::is_arrival_departure_gold_booking_object( $booking ) ) {
 			return;
 		}
 		add_meta_box( 'hvip-booking-pdf-box', __( 'Greeter Details', 'heathrowvip' ), [ __CLASS__, 'render_box' ], 'wc_booking', 'normal', 'default' );
@@ -322,13 +324,14 @@ final class HVIP_Booking_Functionality {
 	public static function render_box( $post ) {
 		$order = self::booking_order( $post->ID );
 		if ( ! $order ) { echo '<p><em>No linked order found.</em></p>'; return; }
-		$show_chauffeur_fields = self::is_arrival_departure_gold_booking( $order );
+		$booking = function_exists( 'get_wc_booking' ) ? get_wc_booking( absint( $post->ID ) ) : null;
+		$show_chauffeur_fields = self::is_arrival_departure_gold_booking_object( $booking );
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
-		$gname = (string) $order->get_meta( self::M_GREETER_NAME );
-		$gcon = (string) $order->get_meta( self::M_GREETER_CONTACT );
-		$cname = (string) $order->get_meta( self::M_CHAUFFEUR_NAME );
-		$cemail = (string) $order->get_meta( self::M_CHAUFFEUR_EMAIL );
-		$ccon = (string) $order->get_meta( self::M_CHAUFFEUR_CONTACT );
+		$gname = self::scoped_contact_value( $order, (int) $post->ID, self::M_GREETER_NAME );
+		$gcon = self::scoped_contact_value( $order, (int) $post->ID, self::M_GREETER_CONTACT );
+		$cname = self::scoped_contact_value( $order, (int) $post->ID, self::M_CHAUFFEUR_NAME );
+		$cemail = self::scoped_contact_value( $order, (int) $post->ID, self::M_CHAUFFEUR_EMAIL );
+		$ccon = self::scoped_contact_value( $order, (int) $post->ID, self::M_CHAUFFEUR_CONTACT );
 		if ( $show_chauffeur_fields ) {
 		echo '<p><label>Greeter Name</label><input type="text" class="widefat" name="hvip_greeter_name" value="' . esc_attr( $gname ) . '"></p>';
 		echo '<p><label>Greeter Contact</label><input type="text" class="widefat" name="hvip_greeter_contact" value="' . esc_attr( $gcon ) . '"></p>';
@@ -353,13 +356,35 @@ final class HVIP_Booking_Functionality {
 		$nonce = isset( $_POST[ self::NONCE_FIELD ] ) ? sanitize_text_field( wp_unslash( $_POST[ self::NONCE_FIELD ] ) ) : '';
 		if ( ! $nonce || ! wp_verify_nonce( $nonce, self::NONCE_ACTION ) ) { return; }
 		$order = self::booking_order( $post_id ); if ( ! $order ) { return; }
-		$show_chauffeur_fields = self::is_arrival_departure_gold_booking( $order );
-		$order->update_meta_data( self::M_GREETER_NAME, sanitize_text_field( wp_unslash( $_POST['hvip_greeter_name'] ?? '' ) ) );
-		$order->update_meta_data( self::M_GREETER_CONTACT, sanitize_text_field( wp_unslash( $_POST['hvip_greeter_contact'] ?? '' ) ) );
+		$booking = function_exists( 'get_wc_booking' ) ? get_wc_booking( absint( $post_id ) ) : null;
+		$show_chauffeur_fields = self::is_arrival_departure_gold_booking_object( $booking );
+		$greeter_name = sanitize_text_field( wp_unslash( $_POST['hvip_greeter_name'] ?? '' ) );
+		$greeter_contact = sanitize_text_field( wp_unslash( $_POST['hvip_greeter_contact'] ?? '' ) );
+		$chauffeur_name = sanitize_text_field( wp_unslash( $_POST['hvip_chauffeur_name'] ?? '' ) );
+		$chauffeur_email = sanitize_email( wp_unslash( $_POST['hvip_chauffeur_email'] ?? '' ) );
+		$chauffeur_contact = sanitize_text_field( wp_unslash( $_POST['hvip_chauffeur_contact'] ?? '' ) );
+
+		// Save booking-scoped contacts (used by admin resend for this booking only).
+		update_post_meta( $post_id, self::M_GREETER_NAME, $greeter_name );
+		update_post_meta( $post_id, self::M_GREETER_CONTACT, $greeter_contact );
 		if ( $show_chauffeur_fields ) {
-			$order->update_meta_data( self::M_CHAUFFEUR_NAME, sanitize_text_field( wp_unslash( $_POST['hvip_chauffeur_name'] ?? '' ) ) );
-			$order->update_meta_data( self::M_CHAUFFEUR_EMAIL, sanitize_email( wp_unslash( $_POST['hvip_chauffeur_email'] ?? '' ) ) );
-			$order->update_meta_data( self::M_CHAUFFEUR_CONTACT, sanitize_text_field( wp_unslash( $_POST['hvip_chauffeur_contact'] ?? '' ) ) );
+			update_post_meta( $post_id, self::M_CHAUFFEUR_NAME, $chauffeur_name );
+			update_post_meta( $post_id, self::M_CHAUFFEUR_EMAIL, $chauffeur_email );
+			update_post_meta( $post_id, self::M_CHAUFFEUR_CONTACT, $chauffeur_contact );
+		} else {
+			delete_post_meta( $post_id, self::M_CHAUFFEUR_NAME );
+			delete_post_meta( $post_id, self::M_CHAUFFEUR_EMAIL );
+			delete_post_meta( $post_id, self::M_CHAUFFEUR_CONTACT );
+		}
+		update_post_meta( $post_id, self::M_BOOKING_CONTACTS_SET, 'yes' );
+
+		// Keep order-level meta updates for backward compatibility with existing non-booking scoped flows.
+		$order->update_meta_data( self::M_GREETER_NAME, $greeter_name );
+		$order->update_meta_data( self::M_GREETER_CONTACT, $greeter_contact );
+		if ( $show_chauffeur_fields ) {
+			$order->update_meta_data( self::M_CHAUFFEUR_NAME, $chauffeur_name );
+			$order->update_meta_data( self::M_CHAUFFEUR_EMAIL, $chauffeur_email );
+			$order->update_meta_data( self::M_CHAUFFEUR_CONTACT, $chauffeur_contact );
 		} else {
 			$order->delete_meta_data( self::M_CHAUFFEUR_NAME );
 			$order->delete_meta_data( self::M_CHAUFFEUR_EMAIL );
@@ -465,11 +490,56 @@ final class HVIP_Booking_Functionality {
 		return 'local' === $env || str_contains( $site, 'localhost' ) || str_contains( $site, '127.0.0.1' ) || str_contains( $site, '.local' );
 	}
 
-	private static function show_chauffeur( WC_Order $order ) {
+	private static function show_chauffeur( WC_Order $order, $booking_id = 0, $booking_obj = null ) {
+		$booking_id = absint( $booking_id );
+		if ( $booking_id > 0 ) {
+			if ( ! $booking_obj && function_exists( 'get_wc_booking' ) ) {
+				try {
+					$booking_obj = get_wc_booking( $booking_id );
+				} catch ( \Throwable $e ) {}
+			}
+			if ( ! self::is_arrival_departure_gold_booking_object( $booking_obj ) ) {
+				return false;
+			}
+			$manual_name  = self::scoped_contact_value( $order, $booking_id, self::M_CHAUFFEUR_NAME );
+			$manual_email = self::scoped_contact_value( $order, $booking_id, self::M_CHAUFFEUR_EMAIL );
+			$manual_phone = self::scoped_contact_value( $order, $booking_id, self::M_CHAUFFEUR_CONTACT );
+			return ( $manual_name !== '' || $manual_email !== '' || $manual_phone !== '' );
+		}
 		if ( ! self::is_arrival_departure_gold_booking( $order ) ) {
 			return false;
 		}
 		return self::has_chauffeur_details( $order );
+	}
+
+	private static function is_arrival_departure_gold_booking_object( $booking ) {
+		if ( ! $booking || ! ( $booking instanceof WC_Booking ) ) {
+			return false;
+		}
+		$product = method_exists( $booking, 'get_product' ) ? $booking->get_product() : null;
+		$slug = '';
+		if ( $product ) {
+			$slug = sanitize_title( (string) get_post_field( 'post_name', $product->get_id() ) );
+		}
+		if ( '' === $slug && $product ) {
+			$slug = sanitize_title( (string) $product->get_name() );
+		}
+		return ( $slug && str_contains( $slug, 'gold' ) && ( str_contains( $slug, 'arrival' ) || str_contains( $slug, 'departure' ) ) );
+	}
+
+	private static function scoped_contact_value( WC_Order $order, $booking_id, $meta_key ) {
+		$booking_id = absint( $booking_id );
+		if ( $booking_id > 0 ) {
+			$is_scoped = 'yes' === (string) get_post_meta( $booking_id, self::M_BOOKING_CONTACTS_SET, true );
+			$booking_value = trim( (string) get_post_meta( $booking_id, $meta_key, true ) );
+			if ( $is_scoped ) {
+				return $booking_value;
+			}
+			if ( '' !== $booking_value ) {
+				return $booking_value;
+			}
+		}
+		return trim( (string) $order->get_meta( $meta_key ) );
 	}
 
 	private static function has_chauffeur_details( WC_Order $order ) {
@@ -500,6 +570,41 @@ final class HVIP_Booking_Functionality {
 		return false;
 	}
 
+	private static function order_has_silver_bronze_gold( WC_Order $order ) {
+		$has_silver = false;
+		$has_bronze = false;
+		$has_gold = false;
+		foreach ( $order->get_items() as $item ) {
+			$product = $item->get_product();
+			$slug = '';
+			if ( $product ) {
+				$slug = sanitize_title( (string) get_post_field( 'post_name', $product->get_id() ) );
+			}
+			if ( '' === $slug ) {
+				$slug = sanitize_title( (string) $item->get_name() );
+			}
+			if ( '' === $slug ) {
+				continue;
+			}
+			if ( str_contains( $slug, 'silver' ) ) {
+				$has_silver = true;
+			}
+			if ( str_contains( $slug, 'bronze' ) ) {
+				$has_bronze = true;
+			}
+			if ( str_contains( $slug, 'gold' ) ) {
+				$has_gold = true;
+			}
+		}
+		return ( $has_silver && $has_bronze && $has_gold );
+	}
+
+	private static function should_hide_totals_on_admin_resend( WC_Order $order, $reason ) {
+		$reason = (string) $reason;
+		$is_admin_resend = in_array( $reason, [ 'admin_resend', 'admin_resend_after_save' ], true );
+		return $is_admin_resend && self::order_has_silver_bronze_gold( $order );
+	}
+
 	private static function plain( $v ) { $s = is_scalar( $v ) ? (string) $v : ''; $s = html_entity_decode( $s, ENT_QUOTES, 'UTF-8' ); $s = wp_strip_all_tags( $s ); return trim( preg_replace( '/\s+/', ' ', $s ) ); }
 	private static function airport_code( $s ) {
 		$s = trim( $s );
@@ -522,12 +627,27 @@ final class HVIP_Booking_Functionality {
 		return $s;
 	}
 
-	private static function context( WC_Order $order, $booking_id = 0 ) {
+	private static function context( WC_Order $order, $booking_id = 0, $scope_to_booking = false, $hide_order_totals = false ) {
 		$names = []; $bags = ''; $flight_no = ''; $from = ''; $to = ''; $date = ''; $time = ''; $class = ''; $requests = []; $meta_l = []; $items_full = []; $adults = 0;
 		$reservation_rows = []; $journey_rows = []; $booking_rows = [];
 		$service_type = ''; $service_date = ''; $service_end_date = ''; $service_time = ''; $service_end_time = '';
 		$booking_obj = null; $booking_number = ''; $booking_datetime = ''; $booking_type = ''; $booking_adults = ''; $booking_children = '';
+		$scoped_order_item_id = 0;
 		$booking_obj = self::resolve_booking_for_order( $order, $booking_id );
+		if ( $scope_to_booking && $booking_id ) {
+			$scoped_order_item_id = absint( get_post_meta( absint( $booking_id ), '_booking_order_item_id', true ) );
+			if ( $scoped_order_item_id <= 0 && $booking_obj instanceof WC_Booking ) {
+				$scoped_product_id = self::booking_product_id( $booking_obj );
+				if ( $scoped_product_id > 0 ) {
+					foreach ( $order->get_items() as $tmp_item ) {
+						if ( (int) $tmp_item->get_product_id() === $scoped_product_id ) {
+							$scoped_order_item_id = (int) $tmp_item->get_id();
+							break;
+						}
+					}
+				}
+			}
+		}
 		if ( $booking_obj instanceof WC_Booking ) {
 			// Match admin booking card format.
 			$service_date = trim( (string) $booking_obj->get_start_date( 'F j, Y', '', true ) );
@@ -537,6 +657,9 @@ final class HVIP_Booking_Functionality {
 		}
 		$item_booking_map = self::booking_map_for_order_items( $order );
 		foreach ( $order->get_items() as $item ) {
+			if ( $scope_to_booking && $scoped_order_item_id > 0 && (int) $item->get_id() !== $scoped_order_item_id ) {
+				continue;
+			}
 			$service_type = $service_type ?: $item->get_name();
 			$row_meta = [];
 			$row_meta_l = [];
@@ -869,7 +992,14 @@ final class HVIP_Booking_Functionality {
 		// Note: WooCommerce returns the country as a 2-letter code (e.g. "GB"),
 		// but your PDF design only needs the address + contact details.
 		$billing_lines = array_values( array_filter( [ $order->get_formatted_billing_full_name(), $order->get_billing_company(), $order->get_billing_address_1(), $order->get_billing_address_2(), trim( $order->get_billing_city() . ' ' . $order->get_billing_postcode() ), $order->get_billing_phone(), $order->get_billing_email() ] ) );
-		$show_chauffeur = self::show_chauffeur( $order );
+		$scoped_booking_id = $booking_obj instanceof WC_Booking ? (int) $booking_obj->get_id() : absint( $booking_id );
+		$greeter_name = self::scoped_contact_value( $order, $scoped_booking_id, self::M_GREETER_NAME );
+		$greeter_contact = self::scoped_contact_value( $order, $scoped_booking_id, self::M_GREETER_CONTACT );
+		$chauffeur_name = self::scoped_contact_value( $order, $scoped_booking_id, self::M_CHAUFFEUR_NAME );
+		$chauffeur_email = self::scoped_contact_value( $order, $scoped_booking_id, self::M_CHAUFFEUR_EMAIL );
+		$chauffeur_contact = self::scoped_contact_value( $order, $scoped_booking_id, self::M_CHAUFFEUR_CONTACT );
+		$show_chauffeur = self::show_chauffeur( $order, $scoped_booking_id, $booking_obj );
+		$show_greeter = ( $show_chauffeur || $greeter_name !== '' || $greeter_contact !== '' );
 		$journey_date = '';
 		if ( $date ) {
 			$ts = strtotime( (string) $date );
@@ -894,22 +1024,23 @@ final class HVIP_Booking_Functionality {
 			'booking_adults' => $booking_adults,
 			'booking_children' => $booking_children,
 			'booking_rows' => $booking_rows,
-			'greeter_name' => (string) $order->get_meta( self::M_GREETER_NAME ), 'greeter_contact' => (string) $order->get_meta( self::M_GREETER_CONTACT ),
-			'show_greeter' => $show_chauffeur,
-			'show_chauffeur' => $show_chauffeur, 'chauffeur_name' => (string) $order->get_meta( self::M_CHAUFFEUR_NAME ), 'chauffeur_email' => (string) $order->get_meta( self::M_CHAUFFEUR_EMAIL ), 'chauffeur_contact' => (string) $order->get_meta( self::M_CHAUFFEUR_CONTACT ),
+			'greeter_name' => $greeter_name, 'greeter_contact' => $greeter_contact,
+			'show_greeter' => $show_greeter,
+			'show_chauffeur' => $show_chauffeur, 'chauffeur_name' => $chauffeur_name, 'chauffeur_email' => $chauffeur_email, 'chauffeur_contact' => $chauffeur_contact,
 			'order_items_full' => $items_full, 'order_date_plain' => $order->get_date_created() ? $order->get_date_created()->date_i18n( 'F j, Y' ) : '', 'order_email' => $order->get_billing_email(), 'order_payment_method' => $order->get_payment_method_title(), 'order_subtotal' => wc_price( (float) $order->get_subtotal(), [ 'currency' => $order->get_currency() ] ), 'order_tax' => wc_price( (float) $order->get_total_tax(), [ 'currency' => $order->get_currency() ] ), 'order_total' => wc_price( (float) $order->get_total(), [ 'currency' => $order->get_currency() ] ), 'billing_address_lines' => $billing_lines,
+			'hide_order_totals' => (bool) $hide_order_totals,
 			// 'company_phone' => get_option( 'hvip_booking_company_phone', '+1 2321 2353 432' ), 'company_email' => get_option( 'hvip_booking_company_email', 'loremipsum@mail.com' ), 'company_address' => get_option( 'hvip_booking_company_address', 'dolor sit amet, consectetur vel rhoncus augue nunc nec turpis.' ), 'terms_title' => get_option( 'hvip_booking_terms_title', 'TERMS AND CONDITIONS' ), 'terms_text' => get_option( 'hvip_booking_terms_text', 'Please refer to our official terms and conditions on the website.' ),
 		];
 	}
 
-	public static function generate_pdf( WC_Order $order, $force = false, $booking_id = 0 ) {
+	public static function generate_pdf( WC_Order $order, $force = false, $booking_id = 0, $scope_to_booking = false, $hide_order_totals = false ) {
 		if ( ! self::mpdf_ok() ) return null;
 		$existing = (string) $order->get_meta( self::M_PDF_PATH ); if ( ! $force && $existing && file_exists( $existing ) ) return $existing;
 		$upload = wp_upload_dir(); $dir = trailingslashit( $upload['basedir'] ) . 'airportvip-pdfs'; if ( ! wp_mkdir_p( $dir ) ) return null;
 		$path = trailingslashit( $dir ) . 'booking-confirmation-' . $order->get_id() . '.pdf';
 		$tmp_dir = self::mpdf_temp_dir();
 		if ( '' === $tmp_dir ) return null;
-		$ctx = self::context( $order, $booking_id );
+		$ctx = self::context( $order, $booking_id, $scope_to_booking, $hide_order_totals );
 		ob_start(); include get_stylesheet_directory() . '/templates/booking-pdf/confirmation.php'; $html = (string) ob_get_clean();
 		try {
 			$mpdf = new \Mpdf\Mpdf(
@@ -969,6 +1100,32 @@ final class HVIP_Booking_Functionality {
 		return '<p>Your booking confirmation PDF is attached.</p>';
 	}
 	private static function chauffeur_html( $order, $booking_id = 0 ) {
+		// Render using WooCommerce's native New Order email template so layout
+		// matches standard WooCommerce admin/new-order emails.
+		$email = null;
+		if ( function_exists( 'WC' ) && WC() && method_exists( WC(), 'mailer' ) ) {
+			$mailer = WC()->mailer();
+			if ( $mailer && method_exists( $mailer, 'get_emails' ) ) {
+				$emails = $mailer->get_emails();
+				if ( isset( $emails['WC_Email_New_Order'] ) ) {
+					$email = $emails['WC_Email_New_Order'];
+				}
+			}
+		}
+		if ( function_exists( 'wc_get_template_html' ) && $email ) {
+			$email_heading = sprintf( 'Chauffeur booking: #%s', $order->get_order_number() );
+			return wc_get_template_html(
+				'emails/admin-new-order.php',
+				[
+					'order'              => $order,
+					'email_heading'      => $email_heading,
+					'additional_content' => '',
+					'sent_to_admin'      => true,
+					'plain_text'         => false,
+					'email'              => $email,
+				]
+			);
+		}
 		$ctx = self::context( $order, $booking_id );
 		$file = get_stylesheet_directory() . '/templates/booking-email/chauffeur-details.php';
 		if ( file_exists( $file ) ) {
@@ -999,14 +1156,20 @@ final class HVIP_Booking_Functionality {
 	}
 
 	private static function send_chauffeur( WC_Order $order, $pdf, $reason, $booking_id = 0 ) {
-		if ( ! self::show_chauffeur( $order ) ) return;
-		$to = sanitize_email( (string) $order->get_meta( self::M_CHAUFFEUR_EMAIL ) ); if ( ! $to || ! is_email( $to ) ) return;
-		$sub = 'Chauffeur Booking Details #' . $order->get_order_number(); $body = self::chauffeur_html( $order, $booking_id ); $final_body = self::wrap_wc_email( $sub, $body ); $att = ( $pdf && file_exists( $pdf ) ) ? [ $pdf ] : [];
-		if ( self::is_local_mode() ) { self::preview_store( $order->get_id(), [ 'type' => 'chauffeur', 'to' => $to, 'subject' => $sub, 'body' => $final_body, 'attachments' => $att, 'reason' => $reason ] ); return; }
-		wp_mail( $to, $sub, $final_body, [ 'Content-Type: text/html; charset=UTF-8' ], $att );
+		if ( ! self::show_chauffeur( $order, $booking_id ) ) return;
+		$to = sanitize_email( self::scoped_contact_value( $order, $booking_id, self::M_CHAUFFEUR_EMAIL ) ); if ( ! $to || ! is_email( $to ) ) return;
+		$sub = 'Chauffeur Booking Details #' . $order->get_order_number(); $body = self::chauffeur_html( $order, $booking_id ); $att = ( $pdf && file_exists( $pdf ) ) ? [ $pdf ] : [];
+		if ( self::is_local_mode() ) { self::preview_store( $order->get_id(), [ 'type' => 'chauffeur', 'to' => $to, 'subject' => $sub, 'body' => $body, 'attachments' => $att, 'reason' => $reason ] ); return; }
+		wp_mail( $to, $sub, $body, [ 'Content-Type: text/html; charset=UTF-8' ], $att );
 	}
 
-	private static function regen_and_send( WC_Order $order, $reason, $booking_id = 0 ) { $pdf = self::generate_pdf( $order, true, $booking_id ); self::send_customer( $order, $pdf, $reason, $booking_id ); self::send_chauffeur( $order, $pdf, $reason, $booking_id ); }
+	private static function regen_and_send( WC_Order $order, $reason, $booking_id = 0 ) {
+		$scope_to_booking = in_array( (string) $reason, [ 'admin_resend_after_save', 'admin_resend' ], true ) && absint( $booking_id ) > 0;
+		$hide_order_totals = self::should_hide_totals_on_admin_resend( $order, $reason );
+		$pdf = self::generate_pdf( $order, true, $booking_id, $scope_to_booking, $hide_order_totals );
+		self::send_customer( $order, $pdf, $reason, $booking_id );
+		self::send_chauffeur( $order, $pdf, $reason, $booking_id );
+	}
 
 	public static function resend_action() {
 		$booking_id = absint( $_GET['booking_id'] ?? 0 ); $order = $booking_id ? self::booking_order( $booking_id ) : null; if ( ! $order ) wp_die( 'Missing order_id.' );
