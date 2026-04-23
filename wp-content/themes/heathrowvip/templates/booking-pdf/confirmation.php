@@ -9,21 +9,23 @@ $journey_rows = $ctx['journey_rows'] ?? [];
 $booking_rows = $ctx['booking_rows'] ?? [];
 $show_greeter   = ! empty( $ctx['show_greeter'] );
 $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
+$hide_order_totals = ! empty( $ctx['hide_order_totals'] );
 ?>
 <!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
   <style>
-    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color:#111; font-size: 11px; }
-    .page { padding: 10px 20px; }
-    .header { text-align:center; margin-bottom: 14px; }
-    .header img { max-width: 190px; height: auto; }
-    h2 { font-size: 24px; margin: 14px 0 8px; font-weight: 700; }
+    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color:#1f2937; font-size: 11px; line-height: 1.45; }
+    .page { padding: 14px 22px; background: #fff; }
+    .header { text-align:center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #d7dde7; }
+    .header img { max-width: 185px; height: auto; }
+    h2 { font-size: 18px; margin: 0 0 8px; font-weight: 700; color: #0f172a; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #333; padding: 7px; vertical-align: top; }
-    th { background: #fff; text-align:left; font-weight: 700; }
-    .muted { color:#666; font-size: 11px; }
+    th, td { border: 1px solid #cfd6e3; padding: 7px; vertical-align: top; }
+    th { background: #f2f5fa; text-align:left; font-weight: 700; color: #111827; }
+    tr:nth-child(even) td { background: #fbfcfe; }
+    .muted { color:#64748b; font-size: 10px; letter-spacing: 0.02em; text-transform: uppercase; }
     .section { margin-top: 14px; }
     .two-col { width: 100%; }
     .left-col { width: 72%; display: inline-block; vertical-align: top; }
@@ -32,10 +34,12 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
     .footer-bar { border: 1px solid #333; margin-top: 10px; font-size: 10px; color: #666; padding: 6px 8px; }
     .payments { text-align:center; margin: 12px 0; color:#666; font-size: 10px; }
     .plain-list { margin: 0; padding-left: 16px; }
-    .simple-box { border:1px solid #ddd; background:#fafafa; padding:10px; margin-top:10px; }
+    .simple-box { border:1px solid #cfd6e3; background:#f8fafc; padding:10px; margin-top:10px; border-radius: 4px; }
     .order-detail-list { margin: 0; padding-left: 14px; }
     .journey-table { table-layout: fixed; }
     .journey-table col.to-col { width: 30%; }
+    .section-title { background: #eaf0f8; border: 1px solid #d6dfec; border-bottom: 0; padding: 7px 9px; margin: 0; font-size: 12px; font-weight: 700; color: #0f172a; }
+    .section table { border-top: 0; }
   </style>
 </head>
 <body>
@@ -47,7 +51,7 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
 
     <div class="two-col section">
       <div class="left-col">
-        <h2>Reservations &amp; Contacts</h2>
+        <h2 class="section-title">Reservations &amp; Contacts</h2>
         <table>
           <tr><th>Service Type</th><th>Start Date</th><th>End Date</th><th>Start Time</th><th>End Time</th><th>Reservation</th></tr>
           <?php if ( ! empty( $reservation_rows ) ) : ?>
@@ -81,18 +85,20 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
     </div>
 
     <div class="section">
-      <h2>Order Summary</h2>
+      <h2 class="section-title">Order Summary</h2>
       <table>
         <tr><th style="width:34%;">Order Number</th><td>#<?php echo esc_html( (string) ( $ctx['order_number'] ?? '—' ) ); ?></td></tr>
         <tr><th>Date</th><td><?php echo esc_html( (string) ( $ctx['order_date_plain'] ?? '—' ) ); ?></td></tr>
         <tr><th>Email</th><td><?php echo esc_html( (string) ( $ctx['order_email'] ?? '—' ) ); ?></td></tr>
-        <tr><th>Total</th><td><?php echo wp_kses_post( (string) ( $ctx['order_total'] ?? '—' ) ); ?></td></tr>
+        <?php if ( ! $hide_order_totals ) : ?>
+          <tr><th>Total</th><td><?php echo wp_kses_post( (string) ( $ctx['order_total'] ?? '—' ) ); ?></td></tr>
+        <?php endif; ?>
         <tr><th>Payment Method</th><td><?php echo esc_html( (string) ( $ctx['order_payment_method'] ?? '—' ) ); ?></td></tr>
       </table>
     </div>
 
     <div class="section">
-      <h2>Journey information</h2>
+      <h2 class="section-title">Journey Information</h2>
       <table class="journey-table">
         <colgroup>
           <col />
@@ -112,8 +118,8 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
               <td><?php echo esc_html( (string) ( $row['passenger_count'] ?? '—' ) ?: '—' ); ?></td>
               <td><?php echo esc_html( (string) ( $row['bags'] ?? '—' ) ?: '—' ); ?></td>
               <td><?php echo esc_html( (string) ( $row['journey_date'] ?? '—' ) ?: '—' ); ?></td>
-              <td><?php echo esc_html( (string) ( $row['journey_from'] ?? '—' ) ?: '—' ); ?></td>
-              <td><?php echo esc_html( (string) ( $row['journey_to'] ?? '—' ) ?: '—' ); ?></td>
+              <td><?php echo nl2br( esc_html( (string) ( $row['journey_from_display'] ?? $row['journey_from'] ?? '—' ) ?: '—' ) ); ?></td>
+              <td><?php echo nl2br( esc_html( (string) ( $row['journey_to_display'] ?? $row['journey_to'] ?? '—' ) ?: '—' ) ); ?></td>
               <td><?php echo esc_html( (string) ( $row['start_time'] ?? '—' ) ?: '—' ); ?></td>
               <td><?php echo esc_html( (string) ( $row['end_time'] ?? '—' ) ?: '—' ); ?></td>
             </tr>
@@ -124,8 +130,8 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
             <td><?php echo esc_html( (string) ( $ctx['passenger_count'] ?? '—' ) ); ?></td>
             <td><?php echo esc_html( (string) ( $ctx['bags'] ?: '—' ) ); ?></td>
             <td><?php echo esc_html( (string) ( $ctx['journey_date'] ?? ( $ctx['flight_date'] ?: '—' ) ) ); ?></td>
-            <td><?php echo esc_html( (string) ( $ctx['journey_from'] ?? '' ) !== '' ? (string) $ctx['journey_from'] : '—' ); ?></td>
-            <td><?php echo esc_html( (string) ( $ctx['journey_to'] ?? '' ) !== '' ? (string) $ctx['journey_to'] : '—' ); ?></td>
+            <td><?php echo nl2br( esc_html( (string) ( $ctx['journey_from_display'] ?? $ctx['journey_from'] ?? '' ) !== '' ? (string) ( $ctx['journey_from_display'] ?? $ctx['journey_from'] ) : '—' ) ); ?></td>
+            <td><?php echo nl2br( esc_html( (string) ( $ctx['journey_to_display'] ?? $ctx['journey_to'] ?? '' ) !== '' ? (string) ( $ctx['journey_to_display'] ?? $ctx['journey_to'] ) : '—' ) ); ?></td>
             <td><?php echo esc_html( (string) ( $ctx['service_time'] ?: ( $ctx['flight_time'] ?: '—' ) ) ); ?></td>
             <td><?php echo esc_html( (string) ( $ctx['service_end_time'] ?: '—' ) ); ?></td>
           </tr>
@@ -134,11 +140,10 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
     </div>
 
     <div class="section">
-      <h2>Order details</h2>
+      <h2 class="section-title">Order Details</h2>
       <table>
         <tr><th>Product</th><th style="width:25%;">Total</th></tr>
         <?php $items_full = $ctx['order_items_full'] ?? []; ?>
-        <?php $hide_order_totals = ! empty( $ctx['hide_order_totals'] ); ?>
         <?php if ( ! empty( $items_full ) ) : foreach ( $items_full as $item_row ) : ?>
           <tr>
             <td><strong><?php echo esc_html( (string) $item_row['product_name'] ); ?> × <?php echo esc_html( (string) $item_row['quantity'] ); ?></strong>
@@ -182,29 +187,58 @@ $show_chauffeur = ! empty( $ctx['show_chauffeur'] );
     </div> -->
 
     <div class="section">
-      <h2>Passenger Contacts, Requests &amp; Account holder</h2>
+      <h2 class="section-title">Passenger Contacts, Requests &amp; Account Holder</h2>
+      <?php $contact_columns = (array) ( $ctx['passenger_contact_columns'] ?? [] ); ?>
       <table>
-        <tr><th>Name</th><th>Phone</th><th>WS Confirmation</th><th>Special Requests</th></tr>
         <tr>
-          <td><?php echo esc_html( (string) ( $ctx['passenger_names'][0] ?? '—' ) ); ?></td>
-          <td><?php echo esc_html( (string) ( $order->get_billing_phone() ?: '—' ) ); ?></td>
-          <td><?php echo esc_html( (string) ( $ctx['order_number'] ?: '—' ) ); ?></td>
-          <td><?php if ( ! empty( $requests ) ) : ?><ul class="plain-list"><?php foreach ( $requests as $r ) : ?><li><?php echo esc_html( (string) $r ); ?></li><?php endforeach; ?></ul><?php else : ?>—<?php endif; ?></td>
+          <th style="width:20%;">Field</th>
+          <?php foreach ( $contact_columns as $index => $col ) : ?>
+            <th><?php echo esc_html( 'Order ' . ( $index + 1 ) ); ?></th>
+          <?php endforeach; ?>
+        </tr>
+        <tr>
+          <th>Name</th>
+          <?php foreach ( $contact_columns as $col ) : ?>
+            <td><?php echo esc_html( (string) ( $col['name'] ?? '—' ) ?: '—' ); ?></td>
+          <?php endforeach; ?>
+        </tr>
+        <tr>
+          <th>Phone</th>
+          <?php foreach ( $contact_columns as $col ) : ?>
+            <td><?php echo esc_html( (string) ( $col['phone'] ?? '—' ) ?: '—' ); ?></td>
+          <?php endforeach; ?>
+        </tr>
+        <tr>
+          <th>Special Requests</th>
+          <?php foreach ( $contact_columns as $col ) : ?>
+            <td>
+              <?php $col_requests = (array) ( $col['special_requests'] ?? [] ); ?>
+              <?php if ( ! empty( $col_requests ) ) : ?>
+                <ul class="plain-list">
+                  <?php foreach ( $col_requests as $r ) : ?>
+                    <li><?php echo esc_html( (string) $r ); ?></li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else : ?>
+                —
+              <?php endif; ?>
+            </td>
+          <?php endforeach; ?>
         </tr>
       </table>
     </div>
 
     <?php if ( $show_greeter ) : ?>
     <div class="section">
-      <h2>Greeter Details</h2>
+      <h2 class="section-title">Greeter Details</h2>
       <table><tr><th>Name</th><th>Contact</th></tr><tr><td><?php echo esc_html( (string) ( $ctx['greeter_name'] ?: '—' ) ); ?></td><td><?php echo esc_html( (string) ( $ctx['greeter_contact'] ?: '—' ) ); ?></td></tr></table>
     </div>
     <?php endif; ?>
 
     <?php if ( $show_chauffeur ) : ?>
     <div class="section">
-      <h2>Chauffeur Details</h2>
-      <table><tr><th>Name</th><th>Contact</th><th>Email</th></tr><tr><td><?php echo esc_html( (string) ( $ctx['chauffeur_name'] ?: 'Tbc.' ) ); ?></td><td><?php echo esc_html( (string) ( $ctx['chauffeur_contact'] ?: 'Tbc.' ) ); ?></td><td><?php echo esc_html( (string) ( $ctx['chauffeur_email'] ?: '—' ) ); ?></td></tr></table>
+      <h2 class="section-title">Chauffeur Details</h2>
+      <table><tr><th>Name</th><th>Contact</th><th>Email</th><th>From</th><th>To</th></tr><tr><td><?php echo esc_html( (string) ( $ctx['chauffeur_name'] ?: 'Tbc.' ) ); ?></td><td><?php echo esc_html( (string) ( $ctx['chauffeur_contact'] ?: 'Tbc.' ) ); ?></td><td><?php echo esc_html( (string) ( $ctx['chauffeur_email'] ?: '—' ) ); ?></td><td><?php echo esc_html( (string) ( $ctx['chauffeur_from_address'] ?? '—' ) ?: '—' ); ?></td><td><?php echo esc_html( (string) ( $ctx['chauffeur_to_address'] ?? '—' ) ?: '—' ); ?></td></tr></table>
     </div>
     <?php endif; ?>
 

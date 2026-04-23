@@ -599,10 +599,25 @@ final class HVIP_Booking_Functionality {
 		return ( $has_silver && $has_bronze && $has_gold );
 	}
 
-	private static function should_hide_totals_on_admin_resend( WC_Order $order, $reason ) {
+	private static function should_hide_totals_on_admin_resend( WC_Order $order, $reason, $booking_id = 0 ) {
 		$reason = (string) $reason;
 		$is_admin_resend = in_array( $reason, [ 'admin_resend', 'admin_resend_after_save' ], true );
-		return $is_admin_resend && self::order_has_silver_bronze_gold( $order );
+		if ( ! $is_admin_resend ) {
+			return false;
+		}
+		$has_multiple_items = count( $order->get_items() ) > 1;
+		if ( ! $has_multiple_items ) {
+			return false;
+		}
+		$booking_id = absint( $booking_id );
+		if ( $booking_id <= 0 || ! function_exists( 'get_wc_booking' ) ) {
+			return self::order_has_silver_bronze_gold( $order );
+		}
+		try {
+			$booking = get_wc_booking( $booking_id );
+			return self::is_arrival_departure_gold_booking_object( $booking );
+		} catch ( \Throwable $e ) {}
+		return self::order_has_silver_bronze_gold( $order );
 	}
 
 	private static function plain( $v ) { $s = is_scalar( $v ) ? (string) $v : ''; $s = html_entity_decode( $s, ENT_QUOTES, 'UTF-8' ); $s = wp_strip_all_tags( $s ); return trim( preg_replace( '/\s+/', ' ', $s ) ); }
@@ -627,11 +642,94 @@ final class HVIP_Booking_Functionality {
 		return $s;
 	}
 
+	private static function detect_journey_type( $value ) {
+		$slug = sanitize_title( (string) $value );
+		if ( '' === $slug ) {
+			return '';
+		}
+		if ( str_contains( $slug, 'arrival' ) ) {
+			return 'arrival';
+		}
+		if ( str_contains( $slug, 'departure' ) ) {
+			return 'departure';
+		}
+		if ( str_contains( $slug, 'transit' ) ) {
+			return 'transit';
+		}
+		return '';
+	}
+
+	private static function journey_route_for_type( $journey_type, $from, $to ) {
+		$journey_type = (string) $journey_type;
+		$from = trim( (string) $from );
+		$to = trim( (string) $to );
+		if ( 'arrival' === $journey_type ) {
+			return [ $from, 'Heathrow' ];
+		}
+		if ( 'departure' === $journey_type ) {
+			return [ 'Heathrow', $to ];
+		}
+		return [ $from, $to ];
+	}
+
+	private static function location_with_flight_value( $location, $label, $flight_value ) {
+		$location = trim( (string) $location );
+		$label = trim( (string) $label );
+		$flight_value = trim( (string) $flight_value );
+		if ( '' === $flight_value ) {
+			return $location;
+		}
+		$line = $label ? ( $label . ': ' . $flight_value ) : $flight_value;
+		if ( '' === $location ) {
+			return '(' . $line . ')';
+		}
+		return $location . "\n(" . $line . ')';
+	}
+
+	private static function passenger_phone_from_meta( $row_meta_l, $fallback_phone = '' ) {
+		$fallback_phone = trim( (string) $fallback_phone );
+		if ( ! is_array( $row_meta_l ) ) {
+			return '' !== $fallback_phone ? $fallback_phone : '—';
+		}
+		$candidates = [
+			'phone number',
+			'passenger phone number',
+			'passenger phone',
+			'passenger mobile',
+			'traveller phone number',
+			'traveller phone',
+			'traveler phone number',
+			'traveler phone',
+			'mobile number',
+			'mobile',
+			'contact number',
+			'phone',
+		];
+		foreach ( $candidates as $key ) {
+			$v = trim( (string) ( $row_meta_l[ $key ] ?? '' ) );
+			if ( '' !== $v ) {
+				return $v;
+			}
+		}
+		foreach ( $row_meta_l as $k => $v ) {
+			$k = strtolower( trim( (string) $k ) );
+			$v = trim( (string) $v );
+			if ( '' === $k || '' === $v ) {
+				continue;
+			}
+			if ( preg_match( '/(passenger|traveller|traveler).*(phone|mobile|contact)|(phone|mobile|contact).*(passenger|traveller|traveler)/i', $k ) ) {
+				return $v;
+			}
+		}
+		return '' !== $fallback_phone ? $fallback_phone : '—';
+	}
+
 	private static function context( WC_Order $order, $booking_id = 0, $scope_to_booking = false, $hide_order_totals = false ) {
 		$names = []; $bags = ''; $flight_no = ''; $from = ''; $to = ''; $date = ''; $time = ''; $class = ''; $requests = []; $meta_l = []; $items_full = []; $adults = 0;
-		$reservation_rows = []; $journey_rows = []; $booking_rows = [];
+		$reservation_rows = []; $journey_rows = []; $booking_rows = []; $passenger_contact_columns = [];
 		$service_type = ''; $service_date = ''; $service_end_date = ''; $service_time = ''; $service_end_time = '';
 		$booking_obj = null; $booking_number = ''; $booking_datetime = ''; $booking_type = ''; $booking_adults = ''; $booking_children = '';
+		$chauffeur_from_address = ''; $chauffeur_to_address = '';
 		$scoped_order_item_id = 0;
 		$booking_obj = self::resolve_booking_for_order( $order, $booking_id );
 		if ( $scope_to_booking && $booking_id ) {
@@ -702,6 +800,8 @@ final class HVIP_Booking_Functionality {
 			$row_service_end_time = '';
 			$row_booking_persons_total = 0;
 			$row_booking_adults_total = 0;
+			$row_booking_children_total = 0;
+			$row_booking_infants_total = 0;
 			if ( $row_booking instanceof WC_Booking ) {
 				$row_service_date = trim( (string) $row_booking->get_start_date( 'F j, Y', '', true ) );
 				$row_service_time = trim( str_replace( ',', '', (string) $row_booking->get_start_date( '', 'g:i a', true ) ) );
@@ -712,6 +812,7 @@ final class HVIP_Booking_Functionality {
 					$row_booking_adults_total = $row_booking_persons_total;
 					$persons = $row_booking->get_persons();
 					$children_total = 0;
+					$infants_total = 0;
 					if ( is_array( $persons ) && class_exists( 'WC_Product_Booking_Person_Type' ) ) {
 						foreach ( $persons as $person_type_id => $qty ) {
 							$qty = (int) $qty;
@@ -721,12 +822,17 @@ final class HVIP_Booking_Functionality {
 							try {
 								$ptype = new WC_Product_Booking_Person_Type( $person_type_id );
 								$pname = strtolower( trim( (string) $ptype->get_name() ) );
-								if ( $pname && ( str_contains( $pname, 'child' ) || str_contains( $pname, 'kid' ) || str_contains( $pname, 'infant' ) ) ) {
+								if ( $pname && str_contains( $pname, 'infant' ) ) {
+									$infants_total += $qty;
+									$children_total += $qty;
+								} elseif ( $pname && ( str_contains( $pname, 'child' ) || str_contains( $pname, 'kid' ) ) ) {
 									$children_total += $qty;
 								}
 							} catch ( \Throwable $e ) {}
 						}
 					}
+					$row_booking_children_total = $children_total;
+					$row_booking_infants_total = $infants_total;
 					$possible_adults = $row_booking_persons_total - $children_total;
 					if ( $possible_adults > 0 ) {
 						$row_booking_adults_total = $possible_adults;
@@ -792,16 +898,50 @@ final class HVIP_Booking_Functionality {
 					''
 				)
 			);
+			$row_journey_type = self::detect_journey_type( (string) $item->get_name() );
+			$row_inbound = trim( (string) ( $row_meta_l['inbound flight number'] ?? ( $row_meta_l['inbound flight'] ?? '' ) ) );
+			$row_outbound = trim( (string) ( $row_meta_l['outbound flight number'] ?? ( $row_meta_l['outbound flight'] ?? '' ) ) );
 			$row_to = trim(
 				(string) (
-					$row_meta_l['inbound flight number'] ??
-					$row_meta_l['inbound flight'] ??
-					$row_meta_l['arrival airport'] ??
-					$row_meta_l['airport of arrival'] ??
-					$row_meta_l['to address'] ??
-					''
+					'transit' === $row_journey_type
+						? (
+							$row_meta_l['destination airport'] ??
+							$row_meta_l['airport destination'] ??
+							$row_meta_l['to airport'] ??
+							$row_meta_l['arrival airport'] ??
+							$row_meta_l['airport of arrival'] ??
+							$row_meta_l['to address'] ??
+							''
+						)
+						: (
+							$row_meta_l['inbound flight number'] ??
+							$row_meta_l['inbound flight'] ??
+							$row_meta_l['destination airport'] ??
+							$row_meta_l['airport destination'] ??
+							$row_meta_l['to airport'] ??
+							$row_meta_l['arrival airport'] ??
+							$row_meta_l['airport of arrival'] ??
+							$row_meta_l['to address'] ??
+							''
+						)
 				)
 			);
+			list( $row_from, $row_to ) = self::journey_route_for_type( $row_journey_type, $row_from, $row_to );
+			$row_from_display = self::location_with_flight_value( $row_from, 'Inbound Flight Number', $row_inbound );
+			$row_to_display = $row_to;
+			if ( 'transit' === $row_journey_type ) {
+				$row_to_display = self::location_with_flight_value( $row_to, 'Outbound Flight Number', $row_outbound );
+			} elseif ( 'departure' === $row_journey_type ) {
+				$row_to_display = self::location_with_flight_value( $row_to, 'Outbound Flight Number', $row_outbound );
+			}
+			$row_from_address = self::display_address_line( (string) ( $row_meta_l['from address'] ?? '' ) );
+			$row_to_address = self::display_address_line( (string) ( $row_meta_l['to address'] ?? '' ) );
+			if ( '' === $chauffeur_from_address && '' !== $row_from_address ) {
+				$chauffeur_from_address = $row_from_address;
+			}
+			if ( '' === $chauffeur_to_address && '' !== $row_to_address ) {
+				$chauffeur_to_address = $row_to_address;
+			}
 			$row_date = (string) ( $row_date_raw ?: $row_service_date );
 			$row_journey_date = '';
 			if ( $row_date ) {
@@ -828,6 +968,8 @@ final class HVIP_Booking_Functionality {
 				'journey_date' => (string) $row_journey_date,
 				'journey_from' => (string) $row_from,
 				'journey_to' => (string) $row_to,
+				'journey_from_display' => (string) $row_from_display,
+				'journey_to_display' => (string) $row_to_display,
 				'start_time' => (string) $row_start_time,
 				'end_time' => (string) $row_end_time,
 			];
@@ -837,6 +979,19 @@ final class HVIP_Booking_Functionality {
 				'booking_type' => (string) $item->get_name(),
 				'booking_adults' => $row_passenger_count > 0 ? (string) $row_passenger_count : '1',
 				'booking_children' => '0',
+			];
+			if ( $row_booking_children_total > 0 ) {
+				$row_meta[] = [ 'key' => 'Children', 'value' => (string) $row_booking_children_total ];
+			}
+			if ( $row_booking_infants_total > 0 ) {
+				$row_meta[] = [ 'key' => 'Infants', 'value' => (string) $row_booking_infants_total ];
+			}
+			$items_full[ count( $items_full ) - 1 ]['meta'] = $row_meta;
+			$passenger_contact_columns[] = [
+				'name' => (string) ( $row_names[0] ?? '—' ),
+				'phone' => self::passenger_phone_from_meta( $row_meta_l, (string) $order->get_billing_phone() ),
+				'ws_confirmation' => (string) ( $order->get_order_number() ?: '—' ),
+				'special_requests' => array_values( array_unique( array_filter( array_map( 'trim', $row_requests ) ) ) ),
 			];
 		}
 		$fname = $meta_l['first name'] ?? ''; $lname = $meta_l['last name'] ?? ''; $full = trim( $fname . ' ' . $lname ); if ( $full ) $names[] = $full;
@@ -1007,9 +1162,60 @@ final class HVIP_Booking_Functionality {
 		} elseif ( $service_date ) {
 			$journey_date = $service_date;
 		}
-		// Journey information PDF: From = Airport of Departure; To = Inbound flight (number).
-		$journey_from = self::display_address_line( trim( (string) ( $meta_l['airport of departure'] ?? '' ) ) );
-		$journey_to = trim( (string) ( $meta_l['inbound flight number'] ?? ( $meta_l['inbound flight'] ?? '' ) ) );
+		$journey_from = self::display_address_line(
+			trim(
+				(string) (
+					$meta_l['airport of departure'] ??
+					$meta_l['from address'] ??
+					$meta_l['station of departure'] ??
+					''
+				)
+			)
+		);
+		$journey_type = self::detect_journey_type( (string) ( $service_type ?: $booking_type ) );
+		$journey_inbound = trim( (string) ( $meta_l['inbound flight number'] ?? ( $meta_l['inbound flight'] ?? '' ) ) );
+		$journey_outbound = trim( (string) ( $meta_l['outbound flight number'] ?? ( $meta_l['outbound flight'] ?? '' ) ) );
+		$journey_to = trim(
+			(string) (
+				'transit' === $journey_type
+					? (
+						$meta_l['destination airport'] ??
+						$meta_l['airport destination'] ??
+						$meta_l['to airport'] ??
+						$meta_l['arrival airport'] ??
+						$meta_l['airport of arrival'] ??
+						$meta_l['to address'] ??
+						''
+					)
+					: (
+						$meta_l['inbound flight number'] ??
+						$meta_l['inbound flight'] ??
+						$meta_l['destination airport'] ??
+						$meta_l['airport destination'] ??
+						$meta_l['to airport'] ??
+						$meta_l['arrival airport'] ??
+						$meta_l['airport of arrival'] ??
+						$meta_l['to address'] ??
+						''
+					)
+			)
+		);
+		list( $journey_from, $journey_to ) = self::journey_route_for_type( $journey_type, $journey_from, $journey_to );
+		$journey_from_display = self::location_with_flight_value( $journey_from, 'Inbound Flight Number', $journey_inbound );
+		$journey_to_display = $journey_to;
+		if ( 'transit' === $journey_type ) {
+			$journey_to_display = self::location_with_flight_value( $journey_to, 'Outbound Flight Number', $journey_outbound );
+		} elseif ( 'departure' === $journey_type ) {
+			$journey_to_display = self::location_with_flight_value( $journey_to, 'Outbound Flight Number', $journey_outbound );
+		}
+		if ( empty( $passenger_contact_columns ) ) {
+			$passenger_contact_columns[] = [
+				'name' => (string) ( $names[0] ?? '—' ),
+				'phone' => (string) ( $order->get_billing_phone() ?: '—' ),
+				'ws_confirmation' => (string) ( $order->get_order_number() ?: '—' ),
+				'special_requests' => $requests,
+			];
+		}
 		return [
 			'order' => $order, 'order_number' => $order->get_order_number(), 'order_date' => $order->get_date_created() ? $order->get_date_created()->date_i18n( 'Y-m-d H:i' ) : '',
 			'service_type' => $service_type, 'service_date' => $service_date, 'service_end_date' => $service_end_date, 'service_time' => $service_time, 'service_end_time' => $service_end_time,
@@ -1017,7 +1223,9 @@ final class HVIP_Booking_Functionality {
 			'passenger_names' => $names, 'passenger_count' => $count, 'bags' => $bags, 'class_of_travel' => $class, 'special_requests' => $requests,
 			'flight_number' => $flight_no, 'flight_date' => $date, 'journey_date' => $journey_date, 'flight_from' => $from, 'flight_to' => $to, 'flight_time' => $time,
 			'journey_from' => $journey_from, 'journey_to' => $journey_to,
+			'journey_from_display' => $journey_from_display, 'journey_to_display' => $journey_to_display,
 			'journey_rows' => $journey_rows,
+			'passenger_contact_columns' => $passenger_contact_columns,
 			'booking_number' => $booking_number,
 			'booking_datetime' => $booking_datetime,
 			'booking_type' => $booking_type,
@@ -1027,6 +1235,8 @@ final class HVIP_Booking_Functionality {
 			'greeter_name' => $greeter_name, 'greeter_contact' => $greeter_contact,
 			'show_greeter' => $show_greeter,
 			'show_chauffeur' => $show_chauffeur, 'chauffeur_name' => $chauffeur_name, 'chauffeur_email' => $chauffeur_email, 'chauffeur_contact' => $chauffeur_contact,
+			'chauffeur_from_address' => $chauffeur_from_address,
+			'chauffeur_to_address' => $chauffeur_to_address,
 			'order_items_full' => $items_full, 'order_date_plain' => $order->get_date_created() ? $order->get_date_created()->date_i18n( 'F j, Y' ) : '', 'order_email' => $order->get_billing_email(), 'order_payment_method' => $order->get_payment_method_title(), 'order_subtotal' => wc_price( (float) $order->get_subtotal(), [ 'currency' => $order->get_currency() ] ), 'order_tax' => wc_price( (float) $order->get_total_tax(), [ 'currency' => $order->get_currency() ] ), 'order_total' => wc_price( (float) $order->get_total(), [ 'currency' => $order->get_currency() ] ), 'billing_address_lines' => $billing_lines,
 			'hide_order_totals' => (bool) $hide_order_totals,
 			// 'company_phone' => get_option( 'hvip_booking_company_phone', '+1 2321 2353 432' ), 'company_email' => get_option( 'hvip_booking_company_email', 'loremipsum@mail.com' ), 'company_address' => get_option( 'hvip_booking_company_address', 'dolor sit amet, consectetur vel rhoncus augue nunc nec turpis.' ), 'terms_title' => get_option( 'hvip_booking_terms_title', 'TERMS AND CONDITIONS' ), 'terms_text' => get_option( 'hvip_booking_terms_text', 'Please refer to our official terms and conditions on the website.' ),
@@ -1165,7 +1375,7 @@ final class HVIP_Booking_Functionality {
 
 	private static function regen_and_send( WC_Order $order, $reason, $booking_id = 0 ) {
 		$scope_to_booking = in_array( (string) $reason, [ 'admin_resend_after_save', 'admin_resend' ], true ) && absint( $booking_id ) > 0;
-		$hide_order_totals = self::should_hide_totals_on_admin_resend( $order, $reason );
+		$hide_order_totals = self::should_hide_totals_on_admin_resend( $order, $reason, $booking_id );
 		$pdf = self::generate_pdf( $order, true, $booking_id, $scope_to_booking, $hide_order_totals );
 		self::send_customer( $order, $pdf, $reason, $booking_id );
 		self::send_chauffeur( $order, $pdf, $reason, $booking_id );
